@@ -14,6 +14,72 @@
     <!-- Google Fonts: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+    <!-- Firebase SDKs (Restored to Original Pattern) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged, 
+            signInWithPopup, 
+            GoogleAuthProvider, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword,
+            signOut 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            query, 
+            onSnapshot, 
+            doc, 
+            deleteDoc, 
+            updateDoc 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Restore Original Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyA_EWqRDRgMwMvZ34UzTZtc3yaFx4MQ8Ew",
+            authDomain: "myfinance-726df.firebaseapp.com",
+            projectId: "myfinance-726df",
+            storageBucket: "myfinance-726df.firebasestorage.app",
+            messagingSenderId: "507604455358",
+            appId: "1:507604455358:web:f8dbb1c6d9ecf3a62fb3ef",
+            measurementId: "G-JTC0Z1HHKQ"
+        };
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            const db = getFirestore(app);
+            const googleProvider = new GoogleAuthProvider();
+            
+            // Re-assigning to window globals as per original request
+            window.db = db;
+            window.auth = auth;
+            window.googleProvider = googleProvider;
+            window.appId = firebaseConfig.projectId; 
+            
+            window.signInWithPopup = signInWithPopup;
+            window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
+            window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+            window.signOut = signOut;
+            window.collection = collection;
+            window.addDoc = addDoc;
+            window.query = query;
+            window.onSnapshot = onSnapshot;
+            window.doc = doc;
+            window.deleteDoc = deleteDoc;
+            window.updateDoc = updateDoc;
+            window.onAuthStateChanged = onAuthStateChanged;
+            
+            window.firebaseReady = true;
+            console.log("Firebase initialized");
+        } catch (e) {
+            console.error("Firebase initialization failed:", e);
+        }
+    </script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -36,7 +102,6 @@
         input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.5; cursor: pointer; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
         .calendar-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: start; padding: 4px; font-size: 0.75rem; border-radius: 4px; position: relative; }
-        .is-payday { background-color: rgba(20, 184, 166, 0.15); color: #14b8a6; border: 1px solid rgba(20, 184, 166, 0.3); }
         .has-bill { border-bottom: 2px solid #fbbf24; }
         .is-today { background-color: #fbbf24; color: black; font-weight: bold; }
         ::-webkit-scrollbar { width: 6px; }
@@ -54,16 +119,13 @@
                 <p class="text-slate-400 text-sm">Real-time Wealth & Bill Tracker</p>
             </div>
 
-            <!-- Error Message -->
             <div id="auth-error" class="hidden bg-red-500/10 border border-red-500/50 text-red-200 text-sm p-3 rounded mb-4 text-center"></div>
 
-            <!-- Login / Register Toggle -->
             <div class="flex bg-slate-900 rounded p-1 mb-6">
                 <button onclick="toggleAuthMode('login')" id="tab-login" class="flex-1 py-2 text-sm rounded bg-brand-teal text-white font-medium transition">Login</button>
                 <button onclick="toggleAuthMode('register')" id="tab-register" class="flex-1 py-2 text-sm rounded text-slate-400 hover:text-white transition">Register</button>
             </div>
 
-            <!-- Email Form -->
             <form id="auth-form" class="space-y-4">
                 <div>
                     <label class="block text-xs text-slate-400 mb-1 font-medium uppercase tracking-wider">Email Address</label>
@@ -83,10 +145,9 @@
                 <div class="relative flex justify-center text-xs uppercase"><span class="bg-[#151f32] px-2 text-slate-500">Or continue with</span></div>
             </div>
 
-            <button onclick="handleLogin()" class="w-full bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 rounded-lg transition flex items-center justify-center">
+            <button onclick="googleLogin()" class="w-full bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 rounded-lg transition flex items-center justify-center">
                 <i class="fa-brands fa-google mr-2 text-red-500"></i> Google
             </button>
-            <p class="text-center text-xs text-slate-500 mt-6 font-medium">Secure data stored via Firestore</p>
         </div>
     </div>
 
@@ -112,79 +173,61 @@
             </div>
         </header>
 
-        <!-- Top Stats Row -->
+        <!-- Accounts and Planning -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <!-- Account Summary -->
             <div class="glass-panel p-4 col-span-1 md:col-span-2">
                 <div class="flex justify-between items-center mb-3">
-                    <h2 class="text-sm font-bold uppercase text-slate-400">Your Accounts</h2>
+                    <h2 class="text-sm font-bold uppercase text-slate-400">Accounts</h2>
                     <button onclick="toggleModal('account-modal')" class="text-xs text-brand-teal hover:underline">+ Add Account</button>
                 </div>
-                <div id="accounts-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <!-- Accounts injected here -->
-                </div>
+                <div id="accounts-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
             </div>
 
-            <!-- Weekly Earning Planner -->
             <div class="glass-panel p-4 col-span-1 md:col-span-2 flex flex-col justify-between">
                 <div>
                     <h2 class="text-sm font-bold uppercase text-slate-400 mb-2">Weekly Income Planning</h2>
                     <div class="flex gap-2">
-                        <input type="number" id="weekly-income" class="input-dark flex-1 p-2 rounded text-lg font-bold" placeholder="Earnings this week">
+                        <input type="number" id="weekly-income" class="input-dark flex-1 p-2 rounded text-lg font-bold" placeholder="Earnings">
                         <button onclick="calculateAllocations()" class="bg-brand-teal px-4 py-2 rounded font-bold text-slate-900 text-sm">Plan</button>
                     </div>
                 </div>
-                <div id="planning-summary" class="mt-2 text-xs text-slate-400 italic">
-                    Enter income to see how much to save for upcoming bills.
-                </div>
+                <div id="planning-summary" class="mt-2 text-xs text-slate-400 italic">Enter income to calculate allocations.</div>
             </div>
         </div>
 
-        <!-- Main Content Grid -->
+        <!-- Bill Tracking -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
-            <!-- Bill Envelopes (The Real Tracker) -->
             <div class="lg:col-span-8 space-y-6">
                 <div class="glass-panel p-6">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-lg font-bold text-white flex items-center">
                             <i class="fa-solid fa-envelope-open-text text-brand-gold mr-2"></i> Bill Envelopes
                         </h2>
-                        <button onclick="toggleModal('bill-modal')" class="bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded text-xs font-medium border border-slate-700">
-                            + New Bill
-                        </button>
+                        <button onclick="toggleModal('bill-modal')" class="bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded text-xs border border-slate-700">+ New Bill</button>
                     </div>
-                    
-                    <div id="bill-envelopes" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Envelopes injected here -->
-                    </div>
+                    <div id="bill-envelopes" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                 </div>
 
-                <!-- Transaction History / All Bills -->
                 <div class="glass-panel p-6 overflow-hidden">
-                    <h2 class="text-lg font-bold text-white mb-4">Payment History & Overview</h2>
+                    <h2 class="text-lg font-bold text-white mb-4">Payment Overview</h2>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-sm">
                             <thead>
                                 <tr class="text-slate-500 border-b border-slate-800">
-                                    <th class="pb-2 font-medium">Bill Name</th>
-                                    <th class="pb-2 font-medium">Due Date</th>
-                                    <th class="pb-2 font-medium">Status</th>
-                                    <th class="pb-2 font-medium text-right">Amount</th>
-                                    <th class="pb-2 font-medium text-right">Actions</th>
+                                    <th class="pb-2">Name</th>
+                                    <th class="pb-2">Due Date</th>
+                                    <th class="pb-2">Status</th>
+                                    <th class="pb-2 text-right">Amount</th>
+                                    <th class="pb-2 text-right">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="all-bills-table" class="divide-y divide-slate-800">
-                                <!-- Table rows injected here -->
-                            </tbody>
+                            <tbody id="all-bills-table" class="divide-y divide-slate-800"></tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <!-- Sidebar -->
             <div class="lg:col-span-4 space-y-6">
-                <!-- Calendar -->
                 <div class="glass-panel p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-sm font-bold uppercase text-slate-400">Calendar</h2>
@@ -194,159 +237,100 @@
                             <button onclick="changeMonth(1)" class="p-1 hover:text-brand-teal"><i class="fa-solid fa-chevron-right text-xs"></i></button>
                         </div>
                     </div>
-                    <div class="grid grid-cols-7 gap-1 text-[10px] text-center text-slate-600 mb-2 font-bold">
-                        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
-                    </div>
                     <div id="calendar-grid" class="calendar-grid"></div>
                 </div>
 
-                <!-- Allocation Plan (Weekly To-Do) -->
                 <div id="weekly-plan-card" class="glass-panel p-6 border-l-4 border-brand-teal hidden">
                     <h2 class="text-sm font-bold uppercase text-brand-teal mb-4">This Week's Plan</h2>
-                    <ul id="weekly-plan-list" class="space-y-3 text-xs">
-                        <!-- Plan items injected here -->
-                    </ul>
+                    <ul id="weekly-plan-list" class="space-y-3 text-xs"></ul>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL: Add Account -->
+    <!-- MODALS -->
     <div id="account-modal" class="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4 hidden">
         <div class="glass-panel w-full max-w-sm p-6">
-            <h3 class="text-lg font-bold mb-4">Add New Account</h3>
+            <h3 class="text-lg font-bold mb-4">Add Account</h3>
             <form onsubmit="saveAccount(event)" class="space-y-4">
-                <div>
-                    <label class="text-xs text-slate-400 block mb-1">Account Name</label>
-                    <input type="text" id="acc-name" required class="input-dark w-full p-2 rounded" placeholder="e.g., Chase Checking">
-                </div>
-                <div>
-                    <label class="text-xs text-slate-400 block mb-1">Current Balance</label>
-                    <input type="number" step="0.01" id="acc-balance" required class="input-dark w-full p-2 rounded" placeholder="0.00">
-                </div>
-                <div class="flex gap-2 pt-2">
-                    <button type="button" onclick="toggleModal('account-modal')" class="flex-1 py-2 text-slate-400">Cancel</button>
-                    <button type="submit" class="flex-1 py-2 bg-brand-teal text-slate-900 font-bold rounded">Add Account</button>
-                </div>
+                <input type="text" id="acc-name" required class="input-dark w-full p-2 rounded" placeholder="Name">
+                <input type="number" step="0.01" id="acc-balance" required class="input-dark w-full p-2 rounded" placeholder="Balance">
+                <button type="submit" class="w-full py-2 bg-brand-teal text-slate-900 font-bold rounded">Add Account</button>
+                <button type="button" onclick="toggleModal('account-modal')" class="w-full text-slate-400 text-sm">Cancel</button>
             </form>
         </div>
     </div>
 
-    <!-- MODAL: Add Bill -->
     <div id="bill-modal" class="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4 hidden">
         <div class="glass-panel w-full max-w-md p-6">
-            <h3 class="text-lg font-bold mb-4">Set Up Bill Envelope</h3>
+            <h3 class="text-lg font-bold mb-4">Bill Envelope</h3>
             <form onsubmit="saveBill(event)" class="space-y-4">
                 <input type="hidden" id="edit-bill-id">
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="col-span-2">
-                        <label class="text-xs text-slate-400 block mb-1">Bill Name</label>
-                        <input type="text" id="bill-name" required class="input-dark w-full p-2 rounded" placeholder="e.g. Rent, Electricity">
-                    </div>
-                    <div>
-                        <label class="text-xs text-slate-400 block mb-1">Target Amount ($)</label>
-                        <input type="number" step="0.01" id="bill-amount" required class="input-dark w-full p-2 rounded" placeholder="0.00">
-                    </div>
-                    <div>
-                        <label class="text-xs text-slate-400 block mb-1">Due Date</label>
-                        <input type="date" id="bill-date" required class="input-dark w-full p-2 rounded">
-                    </div>
-                    <div class="col-span-2">
-                        <label class="text-xs text-slate-400 block mb-1">Savings Strategy</label>
-                        <select id="bill-strategy" class="input-dark w-full p-2 rounded text-sm">
-                            <option value="weekly">Divide into weekly chunks (Recommended)</option>
-                            <option value="full">Pay in full from one paycheck</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="flex gap-2 pt-2">
-                    <button type="button" onclick="toggleModal('bill-modal')" class="flex-1 py-2 text-slate-400">Cancel</button>
-                    <button type="submit" class="flex-1 py-2 bg-brand-gold text-slate-900 font-bold rounded">Create Envelope</button>
-                </div>
+                <input type="text" id="bill-name" required class="input-dark w-full p-2 rounded" placeholder="Bill Name">
+                <input type="number" step="0.01" id="bill-amount" required class="input-dark w-full p-2 rounded" placeholder="Goal Amount">
+                <input type="date" id="bill-date" required class="input-dark w-full p-2 rounded">
+                <select id="bill-strategy" class="input-dark w-full p-2 rounded text-sm">
+                    <option value="weekly">Weekly Savings</option>
+                    <option value="full">Pay in Full</option>
+                </select>
+                <button type="submit" class="w-full py-2 bg-brand-gold text-slate-900 font-bold rounded">Save Envelope</button>
+                <button type="button" onclick="toggleModal('bill-modal')" class="w-full text-slate-400 text-sm">Cancel</button>
             </form>
         </div>
     </div>
 
-    <!-- MODAL: Allocate Cash -->
     <div id="allocate-modal" class="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4 hidden">
         <div class="glass-panel w-full max-w-sm p-6">
-            <h3 id="alloc-title" class="text-lg font-bold mb-1 text-white">Allocate to Envelope</h3>
+            <h3 id="alloc-title" class="text-lg font-bold mb-1">Fill Envelope</h3>
             <p id="alloc-subtitle" class="text-xs text-slate-400 mb-4"></p>
             <form onsubmit="performAllocation(event)" class="space-y-4">
                 <input type="hidden" id="alloc-bill-id">
-                <div>
-                    <label class="text-xs text-slate-400 block mb-1">From Account</label>
-                    <select id="alloc-from-acc" required class="input-dark w-full p-2 rounded text-sm"></select>
-                </div>
-                <div>
-                    <label class="text-xs text-slate-400 block mb-1">Amount to Move</label>
-                    <input type="number" step="0.01" id="alloc-amount" required class="input-dark w-full p-2 rounded" placeholder="0.00">
-                </div>
-                <div class="flex gap-2 pt-2">
-                    <button type="button" onclick="toggleModal('allocate-modal')" class="flex-1 py-2 text-slate-400">Cancel</button>
-                    <button type="submit" class="flex-1 py-2 bg-brand-teal text-slate-900 font-bold rounded">Fill Envelope</button>
-                </div>
+                <select id="alloc-from-acc" required class="input-dark w-full p-2 rounded text-sm"></select>
+                <input type="number" step="0.01" id="alloc-amount" required class="input-dark w-full p-2 rounded" placeholder="Amount">
+                <button type="submit" class="w-full py-2 bg-brand-teal text-slate-900 font-bold rounded">Add Cash</button>
+                <button type="button" onclick="toggleModal('allocate-modal')" class="w-full text-slate-400 text-sm">Cancel</button>
             </form>
         </div>
     </div>
 
-    <!-- Firebase Configuration & Logic -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { 
-            getAuth, 
-            onAuthStateChanged, 
-            signInWithPopup, 
-            GoogleAuthProvider, 
-            signOut, 
-            signInWithCustomToken, 
-            signInAnonymously,
-            signInWithEmailAndPassword,
-            createUserWithEmailAndPassword
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Environment Globals
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'fin-dash-default';
-
-        let user = null;
-        let accounts = [];
-        let bills = [];
+    <!-- Application Logic (Restored to Original Structure) -->
+    <script>
+        let currentUser = null;
+        let billsData = [];
+        let accountsData = [];
         let calDate = new Date();
         let authMode = 'login';
 
-        // 1. AUTHENTICATION
-        const initAuth = async () => {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            }
+        const init = async () => {
+            renderCalendar();
+
+            const checkFirebase = setInterval(async () => {
+                if (window.firebaseReady) {
+                    clearInterval(checkFirebase);
+                    window.onAuthStateChanged(window.auth, (user) => {
+                        if (user) {
+                            currentUser = user;
+                            document.getElementById('auth-screen').classList.add('hidden');
+                            document.getElementById('app').classList.remove('hidden');
+                            document.getElementById('user-display').textContent = `Tracking for ${user.email}`;
+                            setupRealtimeListeners(user.uid);
+                        } else {
+                            currentUser = null;
+                            document.getElementById('auth-screen').classList.remove('hidden');
+                            document.getElementById('app').classList.add('hidden');
+                        }
+                    });
+                }
+            }, 100);
         };
 
-        onAuthStateChanged(auth, (u) => {
-            user = u;
-            if (user) {
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('app').classList.remove('hidden');
-                document.getElementById('user-display').textContent = `Tracking for ${user.email || 'Anonymous User'}`;
-                setupListeners();
-            } else {
-                document.getElementById('auth-screen').classList.remove('hidden');
-                document.getElementById('app').classList.add('hidden');
-            }
-        });
-
-        // Toggle Login/Register
+        // Restored Original Auth UI Logic
         window.toggleAuthMode = (mode) => {
             authMode = mode;
             const btnLogin = document.getElementById('tab-login');
             const btnRegister = document.getElementById('tab-register');
             const submitBtn = document.getElementById('auth-submit-btn');
             const errorDiv = document.getElementById('auth-error');
-            
             errorDiv.classList.add('hidden');
 
             if (mode === 'login') {
@@ -364,139 +348,101 @@
             }
         };
 
-        // Handle Email Login/Register
         document.getElementById('auth-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
             const errorDiv = document.getElementById('auth-error');
-            const submitBtn = document.getElementById('auth-submit-btn');
             
-            errorDiv.classList.add('hidden');
-            submitBtn.disabled = true;
-            submitBtn.classList.add('opacity-50');
-
             try {
                 if (authMode === 'login') {
-                    await signInWithEmailAndPassword(auth, email, password);
+                    await window.signInWithEmailAndPassword(window.auth, email, password);
                 } else {
-                    await createUserWithEmailAndPassword(auth, email, password);
+                    await window.createUserWithEmailAndPassword(window.auth, email, password);
                 }
             } catch (error) {
-                console.error("Auth Error", error);
                 errorDiv.textContent = mapAuthError(error.code);
                 errorDiv.classList.remove('hidden');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.classList.remove('opacity-50');
             }
         });
 
-        const mapAuthError = (code) => {
+        window.googleLogin = async () => {
+            try { await window.signInWithPopup(window.auth, window.googleProvider); } catch (e) {}
+        };
+
+        window.logout = async () => { await window.signOut(window.auth); };
+
+        function mapAuthError(code) {
             switch(code) {
                 case 'auth/invalid-email': return 'Invalid email address.';
-                case 'auth/user-not-found': return 'No account found with this email.';
                 case 'auth/wrong-password': return 'Incorrect password.';
                 case 'auth/email-already-in-use': return 'Email already registered.';
-                case 'auth/weak-password': return 'Password is too weak.';
-                default: return 'Authentication failed. Please try again.';
+                default: return 'Auth failed.';
             }
-        };
+        }
 
-        window.handleLogin = () => {
-            const provider = new GoogleAuthProvider();
-            signInWithPopup(auth, provider).catch(err => {
-                document.getElementById('auth-error').textContent = err.message;
-                document.getElementById('auth-error').classList.remove('hidden');
-            });
-        };
-
-        window.logout = () => signOut(auth);
-
-        // 2. FIRESTORE LISTENERS
-        const setupListeners = () => {
-            if (!user) return;
-
-            // Accounts
-            const accRef = collection(db, 'artifacts', appId, 'users', user.uid, 'accounts');
-            onSnapshot(accRef, (snap) => {
-                accounts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Restored Realtime Logic Style
+        function setupRealtimeListeners(uid) {
+            const accRef = window.collection(window.db, 'artifacts', window.appId, 'users', uid, 'accounts');
+            window.onSnapshot(accRef, (snap) => {
+                accountsData = snap.docs.map(d => ({id: d.id, ...d.data()}));
                 renderAccounts();
                 updateNetWorth();
-            }, (err) => console.error(err));
+            });
 
-            // Bills
-            const billRef = collection(db, 'artifacts', appId, 'users', user.uid, 'bills');
-            onSnapshot(billRef, (snap) => {
-                bills = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const billRef = window.collection(window.db, 'artifacts', window.appId, 'users', uid, 'bills');
+            window.onSnapshot(billRef, (snap) => {
+                billsData = snap.docs.map(d => ({id: d.id, ...d.data()}));
                 renderBills();
                 renderCalendar();
-            }, (err) => console.error(err));
-        };
+            });
+        }
 
-        // 3. ACCOUNT ACTIONS
+        // Feature Logic (Unified with restored Auth)
         window.saveAccount = async (e) => {
             e.preventDefault();
-            if (!user) return;
-            const name = document.getElementById('acc-name').value;
-            const balance = parseFloat(document.getElementById('acc-balance').value);
-            
-            await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'accounts'), {
-                name, balance, updatedAt: Date.now()
-            });
+            const data = { name: document.getElementById('acc-name').value, balance: parseFloat(document.getElementById('acc-balance').value) };
+            await window.addDoc(window.collection(window.db, 'artifacts', window.appId, 'users', currentUser.uid, 'accounts'), data);
             toggleModal('account-modal');
             e.target.reset();
         };
 
         const renderAccounts = () => {
             const container = document.getElementById('accounts-list');
-            container.innerHTML = accounts.map(acc => `
+            container.innerHTML = accountsData.map(acc => `
                 <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-800 flex justify-between items-center group">
                     <div>
                         <div class="text-[10px] text-slate-500 uppercase font-bold">${acc.name}</div>
-                        <div class="text-sm font-bold text-white">$${acc.balance.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                        <div class="text-sm font-bold text-white">$${acc.balance.toFixed(2)}</div>
                     </div>
-                    <button onclick="deleteAccount('${acc.id}')" class="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 text-xs transition">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
+                    <button onclick="deleteAccount('${acc.id}')" class="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 text-xs transition"><i class="fa-solid fa-trash"></i></button>
                 </div>
             `).join('');
-            
-            // Update allocation dropdown
-            const select = document.getElementById('alloc-from-acc');
-            select.innerHTML = accounts.map(acc => `<option value="${acc.id}">${acc.name} ($${acc.balance.toFixed(2)})</option>`).join('');
+            document.getElementById('alloc-from-acc').innerHTML = accountsData.map(a => `<option value="${a.id}">${a.name} ($${a.balance})</option>`).join('');
         };
 
-        window.deleteAccount = async (id) => {
-            if (!confirm("Remove this account? This won't affect bill data, but balances will disappear.")) return;
-            await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'accounts', id));
-        };
+        window.deleteAccount = async (id) => { await window.deleteDoc(window.doc(window.db, 'artifacts', window.appId, 'users', currentUser.uid, 'accounts', id)); };
 
         const updateNetWorth = () => {
-            const total = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+            const total = accountsData.reduce((s, a) => s + a.balance, 0);
             document.getElementById('net-worth').textContent = `$${total.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
         };
 
-        // 4. BILL ACTIONS
         window.saveBill = async (e) => {
             e.preventDefault();
-            if (!user) return;
             const id = document.getElementById('edit-bill-id').value;
             const data = {
                 name: document.getElementById('bill-name').value,
                 amount: parseFloat(document.getElementById('bill-amount').value),
                 dueDate: document.getElementById('bill-date').value,
                 strategy: document.getElementById('bill-strategy').value,
-                saved: id ? bills.find(b => b.id === id).saved || 0 : 0,
-                isPaid: id ? bills.find(b => b.id === id).isPaid || false : false,
-                updatedAt: Date.now()
+                saved: id ? billsData.find(b => b.id === id).saved || 0 : 0,
+                isPaid: id ? billsData.find(b => b.id === id).isPaid || false : false
             };
-
-            const col = collection(db, 'artifacts', appId, 'users', user.uid, 'bills');
             if (id) {
-                await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'bills', id), data);
+                await window.updateDoc(window.doc(window.db, 'artifacts', window.appId, 'users', currentUser.uid, 'bills', id), data);
             } else {
-                await addDoc(col, data);
+                await window.addDoc(window.collection(window.db, 'artifacts', window.appId, 'users', currentUser.uid, 'bills'), data);
             }
             toggleModal('bill-modal');
             e.target.reset();
@@ -504,227 +450,121 @@
         };
 
         const renderBills = () => {
-            const envelopes = document.getElementById('bill-envelopes');
-            const table = document.getElementById('all-bills-table');
+            const env = document.getElementById('bill-envelopes');
+            const sorted = [...billsData].sort((a,b) => (a.isPaid === b.isPaid) ? new Date(a.dueDate) - new Date(b.dueDate) : a.isPaid ? 1 : -1);
             
-            // Sort bills: unpaid first, then by date
-            const sortedBills = [...bills].sort((a, b) => {
-                if (a.isPaid !== b.isPaid) return a.isPaid ? 1 : -1;
-                return new Date(a.dueDate) - new Date(b.dueDate);
-            });
-
-            // Envelope View (Visual Tracking)
-            envelopes.innerHTML = sortedBills.filter(b => !b.isPaid).map(bill => {
-                const progress = Math.min(100, (bill.saved / bill.amount) * 100);
-                const isFullyFunded = bill.saved >= bill.amount;
-                
+            env.innerHTML = sorted.filter(b => !b.isPaid).map(bill => {
+                const prog = Math.min(100, (bill.saved / bill.amount) * 100);
                 return `
-                    <div class="bg-slate-900/40 p-4 rounded-xl border border-slate-800 space-y-3">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h4 class="font-bold text-white text-sm">${bill.name}</h4>
-                                <p class="text-[10px] text-slate-500 italic">Due ${new Date(bill.dueDate).toLocaleDateString()}</p>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-xs font-mono text-slate-300">$${bill.saved.toFixed(2)} / $${bill.amount.toFixed(2)}</span>
-                            </div>
+                    <div class="glass-panel p-4 space-y-3">
+                        <div class="flex justify-between">
+                            <h4 class="font-bold text-sm">${bill.name} <span class="text-[10px] text-slate-500 font-normal">Due ${bill.dueDate}</span></h4>
+                            <span class="text-xs font-mono">$${bill.saved.toFixed(2)} / $${bill.amount.toFixed(2)}</span>
                         </div>
-                        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                            <div class="h-full transition-all duration-500 ${isFullyFunded ? 'bg-brand-teal' : 'bg-brand-gold'}" style="width: ${progress}%"></div>
+                        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                            <div class="h-full bg-brand-gold" style="width: ${prog}%"></div>
                         </div>
                         <div class="flex gap-2">
-                            <button onclick="openAllocate('${bill.id}')" class="flex-1 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-slate-300">
-                                <i class="fa-solid fa-piggy-bank mr-1"></i> Add Cash
-                            </button>
-                            ${isFullyFunded ? `
-                                <button onclick="markAsPaid('${bill.id}')" class="flex-1 py-1 bg-brand-teal text-slate-900 rounded text-[10px] font-bold">
-                                    <i class="fa-solid fa-check mr-1"></i> Mark Paid
-                                </button>
-                            ` : ''}
+                            <button onclick="openAllocate('${bill.id}')" class="flex-1 py-1 bg-slate-800 rounded text-[10px] font-bold">Add Cash</button>
+                            ${bill.saved >= bill.amount ? `<button onclick="markAsPaid('${bill.id}')" class="flex-1 py-1 bg-brand-teal text-slate-900 rounded text-[10px] font-bold">Pay Now</button>` : ''}
                         </div>
                     </div>
                 `;
             }).join('');
 
-            if (sortedBills.filter(b => !b.isPaid).length === 0) {
-                envelopes.innerHTML = `<div class="col-span-full py-10 text-center text-slate-600 italic">All envelopes are empty or paid. Great job!</div>`;
-            }
-
-            // Table View (Detailed List)
-            table.innerHTML = sortedBills.map(bill => `
-                <tr class="hover:bg-slate-800/30 group">
-                    <td class="py-3 font-medium ${bill.isPaid ? 'text-slate-600 line-through' : 'text-white'}">${bill.name}</td>
-                    <td class="py-3 text-slate-400">${new Date(bill.dueDate).toLocaleDateString()}</td>
-                    <td class="py-3">
-                        ${bill.isPaid 
-                            ? '<span class="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded border border-green-500/20">PAID</span>' 
-                            : bill.saved >= bill.amount 
-                                ? '<span class="text-[10px] bg-brand-teal/10 text-brand-teal px-2 py-0.5 rounded border border-brand-teal/20">READY</span>'
-                                : '<span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded">PENDING</span>'
-                        }
-                    </td>
-                    <td class="py-3 text-right font-mono">$${bill.amount.toFixed(2)}</td>
-                    <td class="py-3 text-right space-x-2">
-                        <button onclick="editBill('${bill.id}')" class="text-slate-500 hover:text-brand-teal"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="deleteBill('${bill.id}')" class="text-slate-500 hover:text-red-400"><i class="fa-solid fa-trash"></i></button>
+            document.getElementById('all-bills-table').innerHTML = sorted.map(bill => `
+                <tr class="hover:bg-slate-800/30">
+                    <td class="py-2 ${bill.isPaid ? 'text-slate-600 line-through' : ''}">${bill.name}</td>
+                    <td class="py-2">${bill.dueDate}</td>
+                    <td class="py-2 text-[10px]">${bill.isPaid ? 'PAID' : (bill.saved >= bill.amount ? 'READY' : 'SAVING')}</td>
+                    <td class="py-2 text-right">$${bill.amount.toFixed(2)}</td>
+                    <td class="py-2 text-right">
+                        <button onclick="editBill('${bill.id}')" class="text-slate-500"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteBill('${bill.id}')" class="text-slate-500 ml-2"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>
             `).join('');
         };
 
         window.openAllocate = (id) => {
-            const bill = bills.find(b => b.id === id);
+            const b = billsData.find(x => x.id === id);
             document.getElementById('alloc-bill-id').value = id;
-            document.getElementById('alloc-title').textContent = `Fill ${bill.name} Envelope`;
-            document.getElementById('alloc-subtitle').textContent = `Goal: $${bill.amount.toFixed(2)} | Currently: $${bill.saved.toFixed(2)}`;
-            document.getElementById('alloc-amount').value = (bill.amount - bill.saved).toFixed(2);
+            document.getElementById('alloc-subtitle').textContent = `Saving for ${b.name}`;
+            document.getElementById('alloc-amount').value = (b.amount - b.saved).toFixed(2);
             toggleModal('allocate-modal');
         };
 
         window.performAllocation = async (e) => {
             e.preventDefault();
-            const billId = document.getElementById('alloc-bill-id').value;
-            const accId = document.getElementById('alloc-from-acc').value;
-            const amount = parseFloat(document.getElementById('alloc-amount').value);
+            const bId = document.getElementById('alloc-bill-id').value;
+            const aId = document.getElementById('alloc-from-acc').value;
+            const amt = parseFloat(document.getElementById('alloc-amount').value);
+            const bill = billsData.find(x => x.id === bId);
+            const acc = accountsData.find(x => x.id === aId);
 
-            const bill = bills.find(b => b.id === billId);
-            const acc = accounts.find(a => a.id === accId);
+            if (acc.balance < amt) return alert("Low balance");
 
-            if (acc.balance < amount) {
-                alert("Insufficient funds in that account!");
-                return;
-            }
-
-            // Update Bill
-            await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'bills', billId), {
-                saved: (bill.saved || 0) + amount
-            });
-
-            // Update Account
-            await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'accounts', accId), {
-                balance: acc.balance - amount
-            });
-
+            await window.updateDoc(window.doc(window.db, 'artifacts', window.appId, 'users', currentUser.uid, 'bills', bId), { saved: (bill.saved || 0) + amt });
+            await window.updateDoc(window.doc(window.db, 'artifacts', window.appId, 'users', currentUser.uid, 'accounts', aId), { balance: acc.balance - amt });
             toggleModal('allocate-modal');
         };
 
         window.markAsPaid = async (id) => {
-            const bill = bills.find(b => b.id === id);
-            if (!confirm(`Mark ${bill.name} as paid? This will close the envelope.`)) return;
-            
-            await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'bills', id), {
-                isPaid: true,
-                saved: bill.amount // Ensure it shows full
-            });
+            const b = billsData.find(x => x.id === id);
+            if(confirm(`Mark ${b.name} paid?`)) await window.updateDoc(window.doc(window.db, 'artifacts', window.appId, 'users', currentUser.uid, 'bills', id), { isPaid: true });
         };
 
         window.editBill = (id) => {
-            const bill = bills.find(b => b.id === id);
+            const b = billsData.find(x => x.id === id);
             document.getElementById('edit-bill-id').value = id;
-            document.getElementById('bill-name').value = bill.name;
-            document.getElementById('bill-amount').value = bill.amount;
-            document.getElementById('bill-date').value = bill.dueDate;
-            document.getElementById('bill-strategy').value = bill.strategy;
+            document.getElementById('bill-name').value = b.name;
+            document.getElementById('bill-amount').value = b.amount;
+            document.getElementById('bill-date').value = b.dueDate;
+            document.getElementById('bill-strategy').value = b.strategy;
             toggleModal('bill-modal');
         };
 
-        window.deleteBill = async (id) => {
-            if (!confirm("Delete this bill? Allocated money won't be refunded to accounts automatically.")) return;
-            await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'bills', id));
-        };
+        window.deleteBill = async (id) => { if(confirm("Delete?")) await window.deleteDoc(window.doc(window.db, 'artifacts', window.appId, 'users', currentUser.uid, 'bills', id)); };
 
-        // 5. PLANNING LOGIC
         window.calculateAllocations = () => {
             const income = parseFloat(document.getElementById('weekly-income').value);
-            if (!income || income <= 0) return;
-
-            const unpaid = bills.filter(b => !b.isPaid);
-            const today = new Date();
-            
+            if (!income) return;
+            const unpaid = billsData.filter(b => !b.isPaid);
             const plan = unpaid.map(bill => {
-                const dueDate = new Date(bill.dueDate);
-                const diffMs = dueDate - today;
-                const diffDays = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+                const diffDays = Math.max(1, Math.ceil((new Date(bill.dueDate) - new Date()) / 86400000));
                 const diffWeeks = Math.max(1, Math.ceil(diffDays / 7));
-                
-                let neededThisWeek = 0;
-                if (bill.strategy === 'weekly') {
-                    neededThisWeek = (bill.amount - bill.saved) / diffWeeks;
-                } else if (diffDays <= 7) {
-                    neededThisWeek = bill.amount - bill.saved;
-                }
-
-                return { name: bill.name, amount: Math.max(0, neededThisWeek), dueIn: diffDays };
-            }).filter(p => p.amount > 0).sort((a, b) => a.dueIn - b.dueIn);
-
-            const totalNeeded = plan.reduce((sum, p) => sum + p.amount, 0);
-            const remaining = income - totalNeeded;
-
+                const amt = (bill.strategy === 'weekly') ? (bill.amount - bill.saved) / diffWeeks : (diffDays <= 7 ? bill.amount - bill.saved : 0);
+                return { name: bill.name, amount: Math.max(0, amt) };
+            }).filter(p => p.amount > 0);
+            
             document.getElementById('weekly-plan-card').classList.remove('hidden');
-            document.getElementById('planning-summary').innerHTML = `
-                Total needed for bills: <span class="text-brand-gold font-bold">$${totalNeeded.toFixed(2)}</span><br>
-                Free cash for spending: <span class="text-brand-teal font-bold">$${remaining.toFixed(2)}</span>
-            `;
-
-            document.getElementById('weekly-plan-list').innerHTML = plan.map(p => `
-                <li class="flex justify-between border-b border-slate-800 pb-1">
-                    <span>${p.name} <span class="opacity-50">(Due in ${p.dueIn}d)</span></span>
-                    <span class="font-bold">$${p.amount.toFixed(2)}</span>
-                </li>
-            `).join('');
+            document.getElementById('weekly-plan-list').innerHTML = plan.map(p => `<li class="flex justify-between"><span>${p.name}</span><b>$${p.amount.toFixed(2)}</b></li>`).join('');
         };
 
-        // 6. CALENDAR & UI HELPERS
-        window.toggleModal = (id) => {
-            document.getElementById(id).classList.toggle('hidden');
-        };
-
-        window.changeMonth = (dir) => {
-            calDate.setMonth(calDate.getMonth() + dir);
-            renderCalendar();
-        };
+        window.toggleModal = (id) => document.getElementById(id).classList.toggle('hidden');
+        window.changeMonth = (dir) => { calDate.setMonth(calDate.getMonth() + dir); renderCalendar(); };
 
         const renderCalendar = () => {
             const grid = document.getElementById('calendar-grid');
-            const monthLabel = document.getElementById('cal-month');
             grid.innerHTML = '';
-            
-            const year = calDate.getFullYear();
-            const month = calDate.getMonth();
-            monthLabel.textContent = calDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-
-            const firstDay = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-            for (let i = 0; i < firstDay; i++) grid.appendChild(document.createElement('div'));
-
-            const today = new Date();
-            for (let d = 1; d <= daysInMonth; d++) {
+            document.getElementById('cal-month').textContent = calDate.toLocaleDateString('en-US', {month: 'short', year: 'numeric'});
+            const first = new Date(calDate.getFullYear(), calDate.getMonth(), 1).getDay();
+            const days = new Date(calDate.getFullYear(), calDate.getMonth() + 1, 0).getDate();
+            for (let i = 0; i < first; i++) grid.appendChild(document.createElement('div'));
+            for (let d = 1; d <= days; d++) {
                 const dayEl = document.createElement('div');
-                dayEl.className = 'calendar-day text-slate-500 hover:bg-slate-800/50 cursor-default';
+                dayEl.className = 'calendar-day text-slate-500 bg-slate-800/20';
                 dayEl.textContent = d;
-
-                if (today.getDate() === d && today.getMonth() === month && today.getFullYear() === year) {
-                    dayEl.classList.add('is-today');
-                }
-
-                const dayBills = bills.filter(b => {
+                const hasBill = billsData.some(b => {
                     const bd = new Date(b.dueDate);
-                    return bd.getUTCDate() === d && bd.getUTCMonth() === month && bd.getUTCFullYear() === year;
+                    return bd.getUTCDate() === d && bd.getUTCMonth() === calDate.getMonth() && bd.getUTCFullYear() === calDate.getFullYear();
                 });
-
-                if (dayBills.length > 0) {
-                    dayEl.classList.add('has-bill');
-                    const dot = document.createElement('div');
-                    dot.className = `w-1 h-1 rounded-full absolute bottom-1 left-1/2 -translate-x-1/2 ${dayBills.every(b => b.isPaid) ? 'bg-green-500' : 'bg-brand-gold'}`;
-                    dayEl.appendChild(dot);
-                }
-
+                if (hasBill) dayEl.classList.add('has-bill');
                 grid.appendChild(dayEl);
             }
         };
 
-        initAuth();
+        init();
     </script>
 </body>
 </html>
