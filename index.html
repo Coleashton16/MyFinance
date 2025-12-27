@@ -4,395 +4,984 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Paycheck Allocator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-color: #121212;
-            --card-bg: #1e1e1e;
-            --text-main: #e0e0e0;
-            --text-muted: #a0a0a0;
-            --primary: #4caf50; /* Green for money */
-            --danger: #ff5252;
-            --accent: #2196f3;
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; }
+        
+        /* Custom Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        .animate-spin-slow { animation: spin 3s linear infinite; }
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
+        .progress-bar { transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Hide number input arrows */
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        
+        .hidden-screen { display: none !important; }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        .calendar-day {
+            aspect-ratio: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-        }
-
-        .container {
-            max-width: 800px;
-            width: 100%;
-        }
-
-        h1, h2 { margin-bottom: 10px; }
-
-        /* Summary Header */
-        .summary-card {
-            background: linear-gradient(135deg, #1e1e1e, #2c2c2c);
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            border: 1px solid #333;
-        }
-
-        .total-label { font-size: 0.9em; color: var(--text-muted); }
-        .total-amount { font-size: 2em; font-weight: bold; color: var(--primary); }
-
-        /* Action Buttons */
-        .actions {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        button {
-            padding: 12px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 1rem;
-            transition: transform 0.1s;
-        }
-        
-        button:active { transform: scale(0.98); }
-
-        .btn-primary { background-color: var(--primary); color: white; }
-        .btn-accent { background-color: var(--accent); color: white; }
-        .btn-danger { background-color: var(--danger); color: white; }
-
-        /* Inputs */
-        input, select {
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #444;
-            background: #2b2b2b;
-            color: white;
-            width: 100%;
-            margin-bottom: 10px;
-            box-sizing: border-box;
-        }
-
-        /* Bill List */
-        .bill-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 15px;
-        }
-
-        .bill-card {
-            background-color: var(--card-bg);
-            padding: 20px;
-            border-radius: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-left: 5px solid var(--danger); /* Red default for unpaid */
+            justify-content: center;
+            border-radius: 8px;
+            font-size: 0.8rem;
             position: relative;
         }
-
-        .bill-card.fully-funded {
-            border-left-color: var(--primary);
+        .has-bill::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            width: 4px;
+            height: 4px;
+            background-color: #60a5fa;
+            border-radius: 50%;
         }
-
-        .bill-info h3 { margin: 0 0 5px 0; }
-        .bill-info p { margin: 0; color: var(--text-muted); font-size: 0.9rem; }
-        
-        .bill-stats {
-            text-align: right;
-        }
-
-        .progress-bar-bg {
-            width: 100px;
-            height: 6px;
-            background: #333;
-            border-radius: 3px;
-            margin-top: 5px;
-            overflow: hidden;
-        }
-        .progress-bar-fill {
-            height: 100%;
-            background: var(--primary);
-            width: 0%;
-            transition: width 0.3s;
-        }
-
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-        }
-        .modal-content {
-            background: var(--card-bg);
-            padding: 25px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 400px;
-        }
-        .modal-buttons {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
     </style>
 </head>
-<body>
+<body class="min-h-screen selection:bg-blue-500/30">
 
-<div class="container">
-    <div class="summary-card">
-        <div>
-            <div class="total-label">Total Allocated Cash</div>
-            <div class="total-amount">$<span id="totalWallet">0.00</span></div>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950 transition-opacity duration-500">
+        <div class="relative w-16 h-16 mb-4">
+            <div class="absolute inset-0 rounded-full border-t-2 border-b-2 border-blue-500 animate-spin"></div>
+            <div class="absolute inset-2 rounded-full border-r-2 border-l-2 border-green-400 animate-spin-slow"></div>
         </div>
-        <button class="btn-primary" onclick="openPaycheckModal()">+ Input Paycheck</button>
+        <div class="text-slate-400 text-sm tracking-widest uppercase animate-pulse">Loading Financial Engine</div>
     </div>
 
-    <div class="actions">
-        <button class="btn-accent" onclick="openAddBillModal()">Add New Bill</button>
-    </div>
-
-    <h2>Upcoming Bills</h2>
-    <div id="billList" class="bill-grid">
-        <div style="text-align:center; color:#666; margin-top:20px;">Loading bills...</div>
-    </div>
-</div>
-
-<div id="billModal" class="modal">
-    <div class="modal-content">
-        <h3>Add New Bill</h3>
-        <label>Bill Name</label>
-        <input type="text" id="billName" placeholder="e.g. Electric">
-        <label>Total Amount Due</label>
-        <input type="number" id="billAmount" placeholder="0.00">
-        <label>Due Date</label>
-        <input type="date" id="billDate">
-        <div class="modal-buttons">
-            <button onclick="closeModal('billModal')">Cancel</button>
-            <button class="btn-accent" onclick="saveBill()">Save Bill</button>
-        </div>
-    </div>
-</div>
-
-<div id="paycheckModal" class="modal">
-    <div class="modal-content">
-        <h3>Distribute Paycheck</h3>
-        <p style="color:#aaa; font-size:0.9rem;">Enter your paycheck amount. We will help you add funds to your bills.</p>
-        <label>Paycheck Amount</label>
-        <input type="number" id="paycheckAmount" placeholder="0.00">
-        
-        <div id="allocationList" style="max-height: 200px; overflow-y: auto; margin-top:10px;">
+    <!-- Auth Screen -->
+    <div id="auth-screen" class="hidden-screen min-h-screen flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-md p-8 rounded-2xl shadow-2xl animate-fade-in">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-900/20 text-blue-400 mb-4 ring-1 ring-blue-500/30">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <h1 class="text-2xl font-bold text-white tracking-tight">Paycheck Allocator</h1>
+                <p class="text-slate-500 mt-2 text-sm">Secure Envelope Budgeting</p>
             </div>
 
-        <div class="modal-buttons">
-            <button onclick="closeModal('paycheckModal')">Cancel</button>
-            <button class="btn-primary" onclick="processPaycheck()">Distribute</button>
+            <div id="auth-error" class="hidden bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded-lg mb-6 text-sm text-center"></div>
+
+            <form id="auth-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1 ml-1 uppercase tracking-wider">Email</label>
+                    <div class="relative">
+                        <input type="email" id="auth-email" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg py-3 px-4 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all placeholder-slate-600" placeholder="you@example.com">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1 ml-1 uppercase tracking-wider">Password</label>
+                    <div class="relative">
+                        <input type="password" id="auth-password" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg py-3 px-4 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all placeholder-slate-600" placeholder="••••••••">
+                    </div>
+                </div>
+                <button type="submit" id="auth-submit-btn" class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-3 rounded-lg shadow-lg shadow-blue-900/20 transition-all active:scale-95 mt-2">
+                    Sign In
+                </button>
+            </form>
+
+            <div class="mt-6 text-center">
+                <button id="toggle-auth-mode" class="text-slate-400 hover:text-white text-sm transition-colors hover:underline">
+                    Don't have an account? Create one
+                </button>
+            </div>
         </div>
     </div>
-</div>
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, updateDoc, doc, deleteDoc, query, orderBy } 
-    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-    const firebaseConfig = {
-        apiKey: "AIzaSyBalSGWdrzYB0XH8cw-tcEqT_7uUssjAtY",
-        authDomain: "studio-4711143268-e528e.firebaseapp.com",
-        projectId: "studio-4711143268-e528e",
-        storageBucket: "studio-4711143268-e528e.firebasestorage.app",
-        messagingSenderId: "987198081063",
-        appId: "1:987198081063:web:25138486f6512d022d6602"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const billsCol = collection(db, "user_bills");
-
-    // Global State
-    let bills = [];
-
-    // --- REALTIME LISTENER ---
-    const q = query(billsCol, orderBy("dueDate", "asc"));
-    onSnapshot(q, (snapshot) => {
-        bills = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderBills();
-        updateTotalWallet();
-    });
-
-    // --- RENDER FUNCTIONS ---
-    function renderBills() {
-        const container = document.getElementById('billList');
-        container.innerHTML = "";
-
-        if(bills.length === 0) {
-            container.innerHTML = "<p style='text-align:center; color:#555;'>No bills tracked yet.</p>";
-            return;
-        }
-
-        bills.forEach(bill => {
-            const allocated = bill.allocated || 0;
-            const percentage = Math.min(100, (allocated / bill.amount) * 100);
-            const isFunded = allocated >= bill.amount;
+    <!-- App Screen -->
+    <div id="app-screen" class="hidden-screen min-h-screen pb-20">
+        <div class="max-w-6xl mx-auto p-4 md:p-6">
             
-            const div = document.createElement('div');
-            div.className = `bill-card ${isFunded ? 'fully-funded' : ''}`;
-            div.innerHTML = `
-                <div class="bill-info">
-                    <h3>${bill.name}</h3>
-                    <p>Due: ${bill.dueDate}</p>
-                </div>
-                <div class="bill-stats">
-                    <div style="font-weight:bold; color: ${isFunded ? 'var(--primary)' : 'white'}">
-                        $${allocated.toFixed(2)} / $${Number(bill.amount).toFixed(2)}
-                    </div>
-                    <div class="progress-bar-bg">
-                        <div class="progress-bar-fill" style="width: ${percentage}%"></div>
-                    </div>
-                    <div style="margin-top:5px;">
-                         <button style="font-size:0.7rem; padding:4px 8px; background:#333; color:#fff;" onclick="window.deleteBill('${bill.id}')">Delete</button>
+            <!-- Header -->
+            <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 animate-fade-in">
+                <div>
+                    <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-green-400 bg-clip-text text-transparent">Paycheck Allocator</h1>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="relative flex h-2 w-2">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                        <p class="text-slate-500 text-sm">User: <span id="user-display" class="font-mono text-xs bg-slate-900 px-2 py-0.5 rounded text-slate-400 border border-slate-800">...</span></p>
+                        <button id="sign-out-btn" class="ml-2 text-xs text-red-400 hover:text-red-300 border border-red-900/30 bg-red-900/10 px-2 py-0.5 rounded transition-colors">Sign Out</button>
                     </div>
                 </div>
-            `;
-            container.appendChild(div);
+                <div class="flex gap-3 w-full md:w-auto">
+                    <button onclick="openModal('add-bill-modal')" class="flex-1 md:flex-none flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2.5 rounded-lg border border-slate-700 transition-all active:scale-95 shadow-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                        Add Bill
+                    </button>
+                    <button onclick="openPaycheckModal()" class="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg shadow-blue-900/20 transition-all active:scale-95">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="1" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        Deposit Paycheck
+                    </button>
+                </div>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in delay-100">
+                
+                <!-- Left Column: Calendar & Stats -->
+                <div class="space-y-6">
+                    <!-- Stats -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="glass-panel p-4 rounded-2xl relative overflow-hidden">
+                            <div class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Total Allocated</div>
+                            <div class="text-2xl font-bold text-green-400" id="total-allocated">$0.00</div>
+                        </div>
+                        <div class="glass-panel p-4 rounded-2xl relative overflow-hidden">
+                            <div class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Monthly Load</div>
+                            <div class="text-2xl font-bold text-white" id="total-due">$0.00</div>
+                        </div>
+                    </div>
+
+                    <!-- Calendar -->
+                    <div class="glass-panel p-5 rounded-2xl">
+                        <h3 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                            <span id="calendar-month">Calendar</span>
+                        </h3>
+                        <div class="calendar-grid text-center text-xs text-slate-500 mb-2">
+                            <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
+                        </div>
+                        <div id="calendar-days" class="calendar-grid">
+                            <!-- Days injected here -->
+                        </div>
+                    </div>
+                    
+                    <!-- History (Recent Paychecks) -->
+                    <div class="glass-panel p-5 rounded-2xl">
+                        <h3 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-purple-400"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
+                            History
+                        </h3>
+                        <div id="history-list" class="space-y-3 max-h-48 overflow-y-auto">
+                            <!-- Transactions -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Bills List -->
+                <div class="lg:col-span-2 space-y-4">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        My Bills & Loans
+                    </h2>
+                    <div id="bills-container" class="grid gap-4">
+                        <!-- Bills injected here -->
+                    </div>
+                    <div id="empty-state" class="hidden text-center py-12 glass-panel rounded-2xl border-dashed border border-slate-700">
+                        <div class="text-slate-500 mb-2">No bills found.</div>
+                        <button onclick="openModal('add-bill-modal')" class="text-blue-400 hover:text-blue-300 underline text-sm">Add your first bill</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD/EDIT BILL MODAL -->
+    <div id="add-bill-modal" class="hidden-screen fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity">
+        <div class="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 p-6 shadow-2xl animate-fade-in">
+            <h2 id="modal-title" class="text-xl font-bold text-white mb-6">Add New Bill</h2>
+            <form id="add-bill-form" class="space-y-4">
+                <input type="hidden" id="bill-id">
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Bill Name</label>
+                    <input type="text" id="bill-name" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 transition-colors" placeholder="e.g. Rent, Netflix">
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-1">
+                        <label class="block text-sm text-slate-400 mb-1">Payment Amount</label>
+                        <input type="number" id="bill-amount" step="0.01" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 transition-colors" placeholder="0.00">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-sm text-slate-400 mb-1">Next Due Date</label>
+                        <input type="date" id="bill-date" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 transition-colors">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Frequency</label>
+                    <select id="bill-frequency" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 transition-colors">
+                        <option value="once">One-time</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="biweekly">Bi-Weekly</option>
+                        <option value="monthly" selected>Monthly</option>
+                        <option value="yearly">Yearly</option>
+                    </select>
+                </div>
+                
+                <div class="pt-2 border-t border-slate-800 mt-2">
+                    <label class="flex items-center gap-2 cursor-pointer mb-2">
+                        <input type="checkbox" id="is-loan-check" class="w-4 h-4 rounded bg-slate-700 border-slate-600 text-blue-500 focus:ring-blue-600">
+                        <span class="text-sm text-slate-300">This is a Loan / Microloan</span>
+                    </label>
+                    <div id="loan-fields" class="hidden animate-fade-in">
+                         <label class="block text-sm text-slate-400 mb-1">Total Remaining Balance</label>
+                         <input type="number" id="bill-total-debt" step="0.01" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 transition-colors" placeholder="e.g. 500.00">
+                         <p class="text-xs text-slate-500 mt-1">When paid, funds reduce this balance. When $0, confetti!</p>
+                    </div>
+                </div>
+
+                <div class="mt-8 flex justify-end gap-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('add-bill-modal')" class="px-4 py-2 text-slate-400 hover:text-white transition-colors">Cancel</button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-bold shadow-lg transition-all active:scale-95">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- PAYCHECK MODAL -->
+    <div id="paycheck-modal" class="hidden-screen fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="bg-slate-900 w-full max-w-lg rounded-2xl border border-slate-700 shadow-2xl flex flex-col max-h-[90vh] animate-fade-in">
+            <div class="p-6 border-b border-slate-800">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-400"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+                    Deposit Paycheck
+                </h2>
+                <p class="text-slate-400 text-sm mt-1">Enter your income and distribute it.</p>
+            </div>
+
+            <div class="p-6 flex-1 overflow-y-auto">
+                <div class="mb-6 sticky top-0 bg-slate-900 z-10 pb-4 border-b border-slate-800/50">
+                    <label class="block text-sm font-medium text-slate-400 mb-2">Paycheck Amount</label>
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
+                            <input type="number" id="paycheck-amount" class="w-full bg-slate-800 border border-slate-700 rounded-lg py-3 pl-8 pr-4 text-white focus:outline-none focus:border-green-500 transition-colors text-lg" placeholder="0.00">
+                        </div>
+                        <button onclick="autoDistribute()" class="bg-slate-700 hover:bg-slate-600 text-green-400 px-4 rounded-lg text-sm font-medium transition-colors border border-slate-600">
+                            Auto Fill
+                        </button>
+                    </div>
+                    <!-- Sweep to Savings -->
+                    <div class="mt-3 flex justify-between items-center bg-slate-800/50 p-2 rounded-lg border border-slate-700/50">
+                        <div class="text-sm font-medium text-slate-400" id="remaining-display">
+                            <span>Remaining:</span>
+                            <span id="remaining-amount" class="text-white ml-1">$0.00</span>
+                        </div>
+                        <button onclick="sweepToSavings()" class="text-xs bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 px-3 py-1.5 rounded-md font-medium transition-colors border border-blue-500/30">
+                            Sweep to Savings
+                        </button>
+                    </div>
+                </div>
+
+                <div id="allocation-list" class="space-y-3">
+                    <!-- Allocation Items -->
+                </div>
+            </div>
+
+            <div class="p-6 border-t border-slate-800 flex justify-end gap-3 bg-slate-900 rounded-b-2xl">
+                <button onclick="closeModal('paycheck-modal')" class="px-4 py-2 text-slate-400 hover:text-white transition-colors">Cancel</button>
+                <button onclick="submitDistribution()" id="distribute-btn" class="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-lg font-bold shadow-lg shadow-green-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Distribute Funds
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDoc, onSnapshot, query, orderBy, serverTimestamp, limit } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+        // CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyBalSGWdrzYB0XH8cw-tcEqT_7uUssjAtY",
+            authDomain: "studio-4711143268-e528e.firebaseapp.com",
+            projectId: "studio-4711143268-e528e",
+            storageBucket: "studio-4711143268-e528e.firebasestorage.app",
+            messagingSenderId: "987198081063",
+            appId: "1:987198081063:web:25138486f6512d022d6602"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // Globals
+        let currentUser = null;
+        let billsData = [];
+        let unsubscribeBills = null;
+        let unsubscribeHistory = null;
+        let isRegisterMode = false;
+        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // --- AUTH LOGIC ---
+        
+        const initAuth = async () => {
+             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                try {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } catch(e) { console.log("Custom token failed", e); }
+            }
+        };
+        initAuth();
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            const loading = document.getElementById('loading-screen');
+            const authScreen = document.getElementById('auth-screen');
+            const appScreen = document.getElementById('app-screen');
+
+            loading.style.opacity = '0';
+            setTimeout(() => loading.classList.add('hidden-screen'), 500);
+
+            if (user) {
+                authScreen.classList.add('hidden-screen');
+                appScreen.classList.remove('hidden-screen');
+                document.getElementById('user-display').innerText = user.email;
+                setupBillsListener(user.uid);
+                setupHistoryListener(user.uid);
+            } else {
+                authScreen.classList.remove('hidden-screen');
+                appScreen.classList.add('hidden-screen');
+                if(unsubscribeBills) unsubscribeBills();
+                if(unsubscribeHistory) unsubscribeHistory();
+                billsData = [];
+            }
         });
-    }
 
-    function updateTotalWallet() {
-        const total = bills.reduce((sum, bill) => sum + (bill.allocated || 0), 0);
-        document.getElementById('totalWallet').innerText = total.toFixed(2);
-    }
+        // Form Handlers
+        document.getElementById('auth-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value;
+            const pass = document.getElementById('auth-password').value;
+            const errorDiv = document.getElementById('auth-error');
+            const btn = document.getElementById('auth-submit-btn');
 
-    // --- BILL ACTIONS ---
-    window.saveBill = async () => {
-        const name = document.getElementById('billName').value;
-        const amount = parseFloat(document.getElementById('billAmount').value);
-        const date = document.getElementById('billDate').value;
+            errorDiv.classList.add('hidden');
+            btn.innerHTML = '<span class="animate-spin inline-block mr-2 border-2 border-t-transparent border-white rounded-full h-4 w-4"></span> Processing...';
+            btn.disabled = true;
 
-        if(!name || !amount || !date) return alert("Please fill all fields");
+            try {
+                if (isRegisterMode) {
+                    await createUserWithEmailAndPassword(auth, email, pass);
+                } else {
+                    await signInWithEmailAndPassword(auth, email, pass);
+                }
+            } catch (err) {
+                errorDiv.innerText = err.message.replace('Firebase: ', '');
+                errorDiv.classList.remove('hidden');
+            } finally {
+                btn.innerHTML = isRegisterMode ? 'Create Account' : 'Sign In';
+                btn.disabled = false;
+            }
+        });
 
-        try {
-            await addDoc(billsCol, {
-                name: name,
-                amount: amount,
-                dueDate: date,
-                allocated: 0 // Starts with 0 saved
-            });
-            closeModal('billModal');
-            document.getElementById('billName').value = '';
-            document.getElementById('billAmount').value = '';
-        } catch(e) {
-            console.error(e);
-            alert("Error saving bill");
-        }
-    }
-
-    window.deleteBill = async (id) => {
-        if(confirm("Remove this bill?")) {
-            await deleteDoc(doc(db, "user_bills", id));
-        }
-    }
-
-    // --- PAYCHECK ALLOCATION LOGIC ---
-    window.processPaycheck = async () => {
-        const paycheckInput = document.getElementById('paycheckAmount');
-        let remainingPaycheck = parseFloat(paycheckInput.value);
-        
-        if(!remainingPaycheck || remainingPaycheck <= 0) return alert("Enter valid amount");
-
-        // Simple algorithm: You can expand this. 
-        // Currently, it just manually asks the user. 
-        // Logic: Iterate through inputs generated in the modal
-        
-        const inputs = document.querySelectorAll('.allocation-input');
-        const batchUpdates = [];
-
-        for (let input of inputs) {
-            const addAmount = parseFloat(input.value) || 0;
-            const billId = input.dataset.id;
-            const currentAllocated = parseFloat(input.dataset.current);
+        document.getElementById('toggle-auth-mode').addEventListener('click', (e) => {
+            e.preventDefault();
+            isRegisterMode = !isRegisterMode;
+            const btn = document.getElementById('auth-submit-btn');
+            const toggle = document.getElementById('toggle-auth-mode');
+            const title = document.querySelector('#auth-screen h1');
             
-            if (addAmount > 0) {
-                const billRef = doc(db, "user_bills", billId);
-                // We perform the update immediately (optimistic)
-                await updateDoc(billRef, {
-                    allocated: currentAllocated + addAmount
+            if(isRegisterMode) {
+                btn.innerText = 'Create Account';
+                toggle.innerText = 'Already have an account? Sign In';
+                title.innerText = 'Join Paycheck Allocator';
+            } else {
+                btn.innerText = 'Sign In';
+                toggle.innerText = "Don't have an account? Create one";
+                title.innerText = 'Paycheck Allocator';
+            }
+        });
+
+        document.getElementById('sign-out-btn').addEventListener('click', () => signOut(auth));
+
+        // --- FIRESTORE LOGIC ---
+
+        function setupBillsListener(uid) {
+            const ref = collection(db, 'artifacts', appId, 'users', uid, 'bills');
+            const q = query(ref, orderBy('dueDate', 'asc'));
+
+            unsubscribeBills = onSnapshot(q, (snapshot) => {
+                billsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderBills();
+                renderCalendar();
+                updateStats();
+            });
+        }
+
+        function setupHistoryListener(uid) {
+            const ref = collection(db, 'artifacts', appId, 'users', uid, 'transactions');
+            const q = query(ref, orderBy('date', 'desc'), limit(10));
+
+            unsubscribeHistory = onSnapshot(q, (snapshot) => {
+                const list = document.getElementById('history-list');
+                list.innerHTML = '';
+                if(snapshot.empty) {
+                    list.innerHTML = '<div class="text-xs text-slate-500 text-center">No history yet</div>';
+                    return;
+                }
+                
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const div = document.createElement('div');
+                    div.className = "flex justify-between items-center text-xs p-2 bg-slate-800/50 rounded hover:bg-slate-800 transition-colors group";
+                    div.innerHTML = `
+                        <div>
+                            <div class="text-slate-300 font-medium">Deposited $${data.total.toFixed(2)}</div>
+                            <div class="text-slate-500">${data.date ? new Date(data.date.seconds * 1000).toLocaleDateString() : 'Just now'}</div>
+                        </div>
+                        <div class="flex gap-1">
+                             <button onclick="window.editTransaction('${docSnap.id}')" class="text-slate-500 hover:text-blue-400 p-1" title="Edit">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                            </button>
+                            <button onclick="window.undoTransaction('${docSnap.id}')" class="text-slate-500 hover:text-red-400 p-1" title="Undo & Delete">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
+                        </div>
+                    `;
+                    list.appendChild(div);
                 });
-                remainingPaycheck -= addAmount;
+            });
+        }
+
+        // --- RENDER & UI ---
+
+        function renderBills() {
+            const container = document.getElementById('bills-container');
+            const emptyState = document.getElementById('empty-state');
+            container.innerHTML = '';
+
+            if (billsData.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            billsData.forEach((bill, index) => {
+                const daysLeft = getDaysUntil(bill.dueDate);
+                const isOverdue = daysLeft < 0;
+                const isFullyFunded = (bill.allocated || 0) >= bill.amount;
+                const progress = Math.min(100, Math.max(0, ((bill.allocated || 0) / bill.amount) * 100));
+
+                let statusColor = "text-slate-400";
+                let statusText = `Due in ${daysLeft} days`;
+                if (isOverdue) { statusColor = "text-red-400"; statusText = `Overdue by ${Math.abs(daysLeft)} days`; }
+                else if (daysLeft <= 3) statusColor = "text-orange-400";
+
+                let barColor = "bg-blue-500";
+                if(progress >= 100) barColor = "bg-green-500";
+                else if(progress < 30) barColor = "bg-red-500";
+
+                // Loan Logic
+                const isLoan = !!bill.totalDebt;
+                let loanText = "";
+                if(isLoan) {
+                    loanText = `<div class="text-xs text-purple-300 mt-1 flex items-center gap-1">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> 
+                        Balance: $${(bill.totalDebt - (bill.allocated || 0)).toFixed(2)}
+                    </div>`;
+                    if(isFullyFunded) {
+                        statusText = "Ready to Pay!";
+                        statusColor = "text-green-400";
+                    }
+                }
+
+                const card = document.createElement('div');
+                card.className = `glass-panel rounded-xl p-5 border-l-4 shadow-lg transition-all hover:border-slate-500 animate-fade-in ${isFullyFunded ? 'border-l-green-500' : 'border-l-slate-700'}`;
+                card.style.animationDelay = `${index * 50}ms`;
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h3 class="font-bold text-lg text-white flex items-center gap-2">
+                                ${bill.name}
+                                ${bill.frequency !== 'once' ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>' : ''}
+                            </h3>
+                            <p class="text-sm font-medium ${statusColor}">
+                                ${statusText} <span class="text-slate-500 font-normal"> • ${formatDate(bill.dueDate)}</span>
+                            </p>
+                            ${loanText}
+                        </div>
+                        <div class="flex gap-2">
+                            ${isFullyFunded ? `
+                            <button onclick="window.payBill('${bill.id}')" class="bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shadow-lg shadow-green-900/20">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Pay
+                            </button>` : ''}
+                            <button onclick="window.editBill('${bill.id}')" class="text-slate-500 hover:text-blue-400 p-1 transition-colors">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                            </button>
+                            <button onclick="window.deleteBill('${bill.id}')" class="text-slate-500 hover:text-red-400 p-1 transition-colors">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-2 flex justify-between text-sm text-slate-300">
+                        <span>Saved: <span class="${isFullyFunded ? 'text-green-400 font-bold' : 'text-white'}">$${(bill.allocated || 0).toFixed(2)}</span></span>
+                        <span>Target: $${bill.amount.toFixed(2)}</span>
+                    </div>
+                    <div class="h-2.5 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                        <div class="h-full ${barColor} progress-bar shadow-[0_0_10px_rgba(59,130,246,0.5)]" style="width: ${progress}%"></div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderCalendar() {
+            const today = new Date();
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            document.getElementById('calendar-month').innerText = monthNames[today.getMonth()] + " " + today.getFullYear();
+
+            const daysContainer = document.getElementById('calendar-days');
+            daysContainer.innerHTML = '';
+
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).getDay();
+            const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+
+            // Empty slots
+            for (let i = 0; i < firstDay; i++) {
+                daysContainer.appendChild(document.createElement('div'));
+            }
+
+            // Days
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = "calendar-day hover:bg-slate-800/50 transition-colors cursor-default";
+                dayDiv.innerText = i;
+                
+                const currentStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+                
+                // Highlight today
+                if (i === today.getDate()) {
+                    dayDiv.classList.add('bg-blue-600/20', 'text-blue-400', 'font-bold');
+                } else {
+                    dayDiv.classList.add('text-slate-400');
+                }
+
+                // Check for bills
+                const hasBill = billsData.some(b => b.dueDate === currentStr);
+                if (hasBill) dayDiv.classList.add('has-bill');
+
+                daysContainer.appendChild(dayDiv);
             }
         }
 
-        paycheckInput.value = '';
-        closeModal('paycheckModal');
-    }
+        function updateStats() {
+            const allocated = billsData.reduce((sum, b) => sum + (b.allocated || 0), 0);
+            const total = billsData.reduce((sum, b) => sum + b.amount, 0);
+            document.getElementById('total-allocated').innerText = '$' + allocated.toFixed(2);
+            document.getElementById('total-due').innerText = '$' + total.toFixed(2);
+        }
 
-    // --- MODAL HANDLING ---
-    window.openAddBillModal = () => {
-        document.getElementById('billModal').style.display = 'flex';
-    }
-
-    window.openPaycheckModal = () => {
-        const list = document.getElementById('allocationList');
-        list.innerHTML = '';
+        // --- ACTIONS & HELPERS ---
         
-        // Sort bills: closest due date first
-        const sortedBills = [...bills].sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate));
+        // Modal Logic for Create AND Edit
+        document.getElementById('add-bill-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.innerText = 'Saving...';
+            
+            const id = document.getElementById('bill-id').value;
+            const data = {
+                name: document.getElementById('bill-name').value,
+                amount: parseFloat(document.getElementById('bill-amount').value),
+                dueDate: document.getElementById('bill-date').value,
+                frequency: document.getElementById('bill-frequency').value,
+                // Only update debt if checkbox is checked
+                totalDebt: document.getElementById('is-loan-check').checked ? parseFloat(document.getElementById('bill-total-debt').value) || 0 : null
+            };
 
-        sortedBills.forEach(bill => {
-            const remaining = bill.amount - (bill.allocated || 0);
-            if(remaining <= 0) return; // Skip fully paid bills
-
-            const div = document.createElement('div');
-            div.style.marginBottom = "10px";
-            div.style.padding = "10px";
-            div.style.background = "#222";
-            div.style.borderRadius = "5px";
-            div.innerHTML = `
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                    <span>${bill.name}</span>
-                    <span style="color:var(--danger); font-size:0.8em;">Needs $${remaining.toFixed(2)}</span>
-                </div>
-                <input type="number" 
-                       class="allocation-input" 
-                       data-id="${bill.id}" 
-                       data-current="${bill.allocated || 0}"
-                       placeholder="Add amount..." 
-                       style="margin:0; font-size:0.9em;">
-            `;
-            list.appendChild(div);
+            try {
+                if(id) {
+                    // Update
+                    await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'bills', id), data);
+                } else {
+                    // Create
+                    await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'bills'), {
+                        ...data,
+                        allocated: 0
+                    });
+                }
+                closeModal('add-bill-modal');
+                e.target.reset();
+            } catch(err) { console.error(err); } 
+            finally { btn.innerText = 'Save'; }
+        });
+        
+        // Toggle Loan fields
+        document.getElementById('is-loan-check').addEventListener('change', (e) => {
+            const fields = document.getElementById('loan-fields');
+            if(e.target.checked) fields.classList.remove('hidden');
+            else fields.classList.add('hidden');
         });
 
-        document.getElementById('paycheckModal').style.display = 'flex';
-    }
+        window.editBill = (id) => {
+            const bill = billsData.find(b => b.id === id);
+            if(!bill) return;
 
-    window.closeModal = (id) => {
-        document.getElementById(id).style.display = 'none';
-    }
-    
-    // Close modal on outside click
-    window.onclick = function(event) {
-        if (event.target.classList.contains('modal')) {
-            event.target.style.display = "none";
+            document.getElementById('modal-title').innerText = 'Edit Bill';
+            document.getElementById('bill-id').value = bill.id;
+            document.getElementById('bill-name').value = bill.name;
+            document.getElementById('bill-amount').value = bill.amount;
+            document.getElementById('bill-date').value = bill.dueDate;
+            document.getElementById('bill-frequency').value = bill.frequency;
+            
+            const isLoan = !!bill.totalDebt;
+            document.getElementById('is-loan-check').checked = isLoan;
+            document.getElementById('loan-fields').className = isLoan ? 'animate-fade-in' : 'hidden';
+            if(isLoan) document.getElementById('bill-total-debt').value = bill.totalDebt;
+
+            openModal('add-bill-modal');
         }
-    }
-</script>
 
+        window.payBill = async (id) => {
+            const bill = billsData.find(b => b.id === id);
+            if(!bill) return;
+            const ref = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'bills', id);
+            
+            // Check Loan Logic
+            if(bill.totalDebt) {
+                const newDebt = bill.totalDebt - (bill.allocated || 0);
+                if(newDebt <= 0.01) { // Floating point safety
+                    // Confetti!
+                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                    if(confirm(`Congrats! ${bill.name} is fully paid off! Archive it?`)) {
+                        await deleteDoc(ref);
+                        return;
+                    } else {
+                         await updateDoc(ref, { allocated: 0, totalDebt: 0 });
+                         return;
+                    }
+                } else {
+                    // Just reduce debt, reset allocated, advance date
+                    const next = calculateNextDueDate(bill.dueDate, bill.frequency);
+                    await updateDoc(ref, { allocated: 0, totalDebt: newDebt, dueDate: next });
+                    return;
+                }
+            }
+
+            // Normal Bill Logic
+            if(bill.frequency === 'once') {
+                if(confirm("This is a one-time bill. Remove it now?")) {
+                    await deleteDoc(ref);
+                } else {
+                    await updateDoc(ref, { allocated: 0 });
+                }
+            } else {
+                const next = calculateNextDueDate(bill.dueDate, bill.frequency);
+                await updateDoc(ref, { allocated: 0, dueDate: next });
+            }
+        };
+
+        window.deleteBill = async (id) => {
+            if(confirm("Delete this bill?")) {
+                await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'bills', id));
+            }
+        };
+        
+        // --- TRANSACTIONS LOGIC ---
+
+        window.editTransaction = async (txId) => {
+            if(!confirm("To edit this deposit, we will undo it first and let you redistribute. Continue?")) return;
+            
+            const txRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'transactions', txId);
+            const txSnap = await getDoc(txRef);
+            if(!txSnap.exists()) return;
+            const data = txSnap.data();
+
+            // 1. Undo
+            const updates = [];
+            for (const [billId, amount] of Object.entries(data.allocations)) {
+                const bill = billsData.find(b => b.id === billId);
+                if(bill) {
+                    const newAlloc = Math.max(0, (bill.allocated || 0) - amount);
+                    updates.push(updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'bills', billId), {
+                        allocated: newAlloc
+                    }));
+                }
+            }
+            updates.push(deleteDoc(txRef));
+            await Promise.all(updates);
+
+            // 2. Open Modal and set amount
+            window.openPaycheckModal();
+            // We set the amount after opening so the listener logic works
+            setTimeout(() => {
+                const input = document.getElementById('paycheck-amount');
+                if(input) {
+                    input.value = data.total;
+                    input.dispatchEvent(new Event('input')); // trigger listeners
+                }
+            }, 100);
+        };
+        
+        window.undoTransaction = async (txId) => {
+            if(!confirm("Undo this deposit? This will remove funds from the envelopes.")) return;
+            const txRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'transactions', txId);
+            const txSnap = await getDoc(txRef);
+            
+            if(!txSnap.exists()) return;
+            const data = txSnap.data();
+            const updates = [];
+            
+            // Reverse allocations
+            for (const [billId, amount] of Object.entries(data.allocations)) {
+                const bill = billsData.find(b => b.id === billId);
+                if(bill) {
+                    const newAlloc = Math.max(0, (bill.allocated || 0) - amount);
+                    updates.push(updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'bills', billId), {
+                        allocated: newAlloc
+                    }));
+                }
+            }
+            
+            // Delete transaction
+            updates.push(deleteDoc(txRef));
+            await Promise.all(updates);
+        };
+
+
+        // --- PAYCHECK LOGIC ---
+
+        window.openPaycheckModal = () => {
+            const list = document.getElementById('allocation-list');
+            list.innerHTML = '';
+            document.getElementById('paycheck-amount').value = '';
+            updateRemaining();
+
+            // Sort unpaid by urgency, BUT force "Savings" to the bottom
+            const unpaid = billsData
+                .filter(b => (b.allocated || 0) < b.amount || b.name.toLowerCase().includes('savings'))
+                .sort((a,b) => {
+                    // Force savings to bottom
+                    const isASavings = a.name.toLowerCase().includes('savings');
+                    const isBSavings = b.name.toLowerCase().includes('savings');
+                    if (isASavings && !isBSavings) return 1;
+                    if (!isASavings && isBSavings) return -1;
+                    // Otherwise sort by urgency
+                    return getDaysUntil(a.dueDate) - getDaysUntil(b.dueDate);
+                });
+
+            if(unpaid.length === 0) {
+                list.innerHTML = '<div class="text-center text-slate-500 py-4">All bills are funded!</div>';
+            } else {
+                unpaid.forEach(bill => {
+                    const needed = bill.amount - (bill.allocated || 0);
+                    const div = document.createElement('div');
+                    div.className = "bg-slate-800 p-3 rounded-lg border border-slate-700 flex items-center justify-between";
+                    div.innerHTML = `
+                        <div class="flex-1">
+                            <div class="text-white font-medium">${bill.name}</div>
+                            <div class="text-xs text-slate-400">Needs $${needed.toFixed(2)} • Due ${formatDate(bill.dueDate)}</div>
+                        </div>
+                        <div class="w-28 relative">
+                            <input type="number" 
+                                data-id="${bill.id}"
+                                data-needed="${needed}"
+                                class="allocation-input w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-right text-white focus:border-green-500 focus:outline-none text-sm placeholder-slate-600"
+                                placeholder="0.00">
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+            }
+            
+            document.querySelectorAll('.allocation-input').forEach(inp => {
+                inp.addEventListener('input', updateRemaining);
+            });
+            document.getElementById('paycheck-amount').addEventListener('input', updateRemaining);
+
+            openModal('paycheck-modal');
+        };
+
+        window.sweepToSavings = async () => {
+            const remainingText = document.getElementById('remaining-amount').innerText.replace('$','');
+            const remainder = parseFloat(remainingText) || 0;
+            if(remainder <= 0) return;
+
+            // Find Savings Input
+            let savingsInput = Array.from(document.querySelectorAll('.allocation-input')).find(input => {
+                const id = input.dataset.id;
+                const bill = billsData.find(b => b.id === id);
+                return bill.name.toLowerCase().includes('savings');
+            });
+
+            if(savingsInput) {
+                const currentVal = parseFloat(savingsInput.value) || 0;
+                savingsInput.value = (currentVal + remainder).toFixed(2);
+                updateRemaining(); // Recalculate
+            } else {
+                if(confirm("No 'Savings' envelope found. Create one automatically?")) {
+                     await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'bills'), {
+                        name: 'Savings',
+                        amount: 10000, // Arbitrary high target for savings
+                        dueDate: new Date().toISOString().split('T')[0],
+                        frequency: 'monthly',
+                        allocated: 0
+                    });
+                    // Re-open (close then open to refresh list)
+                    // We lose input state if we just reload, but since user had no savings bill, they probably just started.
+                    // Let's just alert them to re-click.
+                    alert("Savings envelope created! Please click 'Sweep to Savings' again.");
+                    // Force refresh of list without closing? Tricky with current arch. 
+                    // Better to just let the Snapshot listener update background, but we need to refresh the modal list.
+                    // Since it's rare (one time setup), alert is fine.
+                    // Actually, let's just close and re-open to be cleaner, saving the amount.
+                    const currentAmount = document.getElementById('paycheck-amount').value;
+                    closeModal('paycheck-modal');
+                    setTimeout(() => {
+                        openPaycheckModal();
+                        setTimeout(() => {
+                             document.getElementById('paycheck-amount').value = currentAmount;
+                             document.getElementById('paycheck-amount').dispatchEvent(new Event('input'));
+                        }, 200);
+                    }, 500);
+                }
+            }
+        };
+
+        window.autoDistribute = () => {
+            let amount = parseFloat(document.getElementById('paycheck-amount').value) || 0;
+            const inputs = document.querySelectorAll('.allocation-input');
+            inputs.forEach(input => {
+                if(amount <= 0) { input.value = ''; return; }
+                const needed = parseFloat(input.dataset.needed);
+                const give = Math.min(amount, needed);
+                input.value = give.toFixed(2);
+                amount -= give;
+            });
+            updateRemaining();
+        };
+
+        function updateRemaining() {
+            const totalIn = parseFloat(document.getElementById('paycheck-amount').value) || 0;
+            let allocated = 0;
+            document.querySelectorAll('.allocation-input').forEach(i => allocated += (parseFloat(i.value) || 0));
+            const rem = totalIn - allocated;
+            const el = document.getElementById('remaining-amount');
+            const display = document.getElementById('remaining-display');
+            const btn = document.getElementById('distribute-btn');
+            
+            el.innerText = '$' + rem.toFixed(2);
+            if(rem < 0) {
+                display.classList.remove('text-slate-400'); display.classList.add('text-red-400'); btn.disabled = true;
+            } else {
+                display.classList.add('text-slate-400'); display.classList.remove('text-red-400'); btn.disabled = false;
+            }
+        }
+
+        window.submitDistribution = async () => {
+            const btn = document.getElementById('distribute-btn');
+            btn.innerText = 'Distributing...';
+            btn.disabled = true;
+
+            const updates = [];
+            const allocationRecord = {};
+            let totalDistributed = 0;
+
+            document.querySelectorAll('.allocation-input').forEach(input => {
+                const add = parseFloat(input.value);
+                if(add > 0) {
+                    const id = input.dataset.id;
+                    const bill = billsData.find(b => b.id === id);
+                    if(bill) {
+                        allocationRecord[id] = add;
+                        totalDistributed += add;
+                        updates.push(updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'bills', id), {
+                            allocated: (bill.allocated || 0) + add
+                        }));
+                    }
+                }
+            });
+
+            if(totalDistributed > 0) {
+                // Save Transaction History
+                updates.push(addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'transactions'), {
+                    date: serverTimestamp(),
+                    total: totalDistributed,
+                    allocations: allocationRecord
+                }));
+            }
+
+            await Promise.all(updates);
+            btn.innerText = 'Distribute Funds';
+            btn.disabled = false;
+            closeModal('paycheck-modal');
+        };
+
+        // --- UTILS ---
+
+        window.openModal = (id) => {
+            document.getElementById(id).classList.remove('hidden-screen');
+            if(id === 'add-bill-modal') {
+                // Reset if opening fresh (not edit)
+                if(document.getElementById('modal-title').innerText !== 'Edit Bill') {
+                    document.getElementById('add-bill-form').reset();
+                    document.getElementById('bill-id').value = '';
+                    document.getElementById('modal-title').innerText = 'Add New Bill';
+                    document.getElementById('loan-fields').classList.add('hidden');
+                }
+            }
+        };
+
+        window.closeModal = (id) => {
+            document.getElementById(id).classList.add('hidden-screen');
+            if(id === 'add-bill-modal') {
+                // Reset title for next time
+                setTimeout(() => {
+                    document.getElementById('modal-title').innerText = 'Add New Bill';
+                    document.getElementById('bill-id').value = '';
+                }, 300);
+            }
+        };
+        
+        window.onclick = function(event) {
+            if (event.target.classList.contains('fixed')) { 
+                if(event.target.id !== 'loading-screen') event.target.classList.add('hidden-screen');
+            }
+        }
+
+        function formatDate(d) {
+            if (!d) return 'No Date';
+            return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function getDaysUntil(d) {
+            const today = new Date(); today.setHours(0,0,0,0);
+            const target = new Date(d); target.setHours(0,0,0,0);
+            return Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+        }
+
+        function calculateNextDueDate(current, freq) {
+            const d = new Date(current);
+            if(freq === 'weekly') d.setDate(d.getDate() + 7);
+            else if(freq === 'biweekly') d.setDate(d.getDate() + 14);
+            else if(freq === 'monthly') d.setMonth(d.getMonth() + 1);
+            else if(freq === 'yearly') d.setFullYear(d.getFullYear() + 1);
+            return d.toISOString().split('T')[0];
+        }
+
+    </script>
 </body>
 </html>
