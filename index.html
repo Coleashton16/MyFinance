@@ -241,10 +241,16 @@
                         <input type="checkbox" id="is-loan-check" class="w-4 h-4 rounded bg-slate-700 border-slate-600 text-blue-500 focus:ring-blue-600">
                         <span class="text-sm text-slate-300">This is a Loan / Microloan</span>
                     </label>
-                    <div id="loan-fields" class="hidden animate-fade-in">
-                         <label class="block text-sm text-slate-400 mb-1">Total Remaining Balance</label>
-                         <input type="number" id="bill-total-debt" step="0.01" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 transition-colors" placeholder="e.g. 500.00">
-                         <p class="text-xs text-slate-500 mt-1">When paid, funds reduce this balance. When $0, confetti!</p>
+                    <div id="loan-fields" class="hidden animate-fade-in space-y-3">
+                         <div>
+                             <label class="block text-sm text-slate-400 mb-1">Current Loan Balance</label>
+                             <input type="number" id="bill-total-debt" step="0.01" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 transition-colors" placeholder="e.g. 14200.00">
+                         </div>
+                         <div>
+                             <label class="block text-sm text-slate-400 mb-1">Annual Interest Rate (%)</label>
+                             <input type="number" id="bill-interest" step="0.01" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 transition-colors" placeholder="e.g. 7.9">
+                             <p class="text-xs text-slate-500 mt-1">Used to calculate interest portion when paying.</p>
+                         </div>
                     </div>
                 </div>
 
@@ -497,9 +503,11 @@
                 const isLoan = !!bill.totalDebt;
                 let loanText = "";
                 if(isLoan) {
+                    const rateText = bill.interestRate ? `<span class="bg-slate-700 px-1 rounded text-[10px] ml-1">${bill.interestRate}% APR</span>` : '';
                     loanText = `<div class="text-xs text-purple-300 mt-1 flex items-center gap-1">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> 
                         Balance: $${(bill.totalDebt - (bill.allocated || 0)).toFixed(2)}
+                        ${rateText}
                     </div>`;
                     if(isFullyFunded) {
                         statusText = "Ready to Pay!";
@@ -609,7 +617,8 @@
                 dueDate: document.getElementById('bill-date').value,
                 frequency: document.getElementById('bill-frequency').value,
                 // Only update debt if checkbox is checked
-                totalDebt: document.getElementById('is-loan-check').checked ? parseFloat(document.getElementById('bill-total-debt').value) || 0 : null
+                totalDebt: document.getElementById('is-loan-check').checked ? parseFloat(document.getElementById('bill-total-debt').value) || 0 : null,
+                interestRate: document.getElementById('is-loan-check').checked ? parseFloat(document.getElementById('bill-interest').value) || 0 : null
             };
 
             try {
@@ -649,8 +658,11 @@
             
             const isLoan = !!bill.totalDebt;
             document.getElementById('is-loan-check').checked = isLoan;
-            document.getElementById('loan-fields').className = isLoan ? 'animate-fade-in' : 'hidden';
-            if(isLoan) document.getElementById('bill-total-debt').value = bill.totalDebt;
+            document.getElementById('loan-fields').className = isLoan ? 'animate-fade-in space-y-3' : 'hidden';
+            if(isLoan) {
+                document.getElementById('bill-total-debt').value = bill.totalDebt;
+                document.getElementById('bill-interest').value = bill.interestRate || '';
+            }
 
             openModal('add-bill-modal');
         }
@@ -662,7 +674,33 @@
             
             // Check Loan Logic
             if(bill.totalDebt) {
-                const newDebt = bill.totalDebt - (bill.allocated || 0);
+                const payment = bill.allocated || 0;
+                let newDebt = bill.totalDebt;
+                let principal = payment;
+                let interest = 0;
+
+                // Interest Calculation Logic
+                if (bill.interestRate && bill.interestRate > 0) {
+                    // Approximate Monthly Interest: (Balance * AnnualRate) / 12
+                    const monthlyRate = (bill.interestRate / 100) / 12;
+                    interest = bill.totalDebt * monthlyRate;
+                    
+                    if (payment <= interest) {
+                        alert(`Warning: Your payment of $${payment.toFixed(2)} is less than the accrued interest of $${interest.toFixed(2)}. Your balance will increase.`);
+                        newDebt = bill.totalDebt + (interest - payment);
+                        principal = 0; // Or negative, technically
+                    } else {
+                        principal = payment - interest;
+                        newDebt = bill.totalDebt - principal;
+                    }
+                    
+                    // Confirm with user breakdown
+                    const msg = `Payment Breakdown:\n\nPayment Amount: $${payment.toFixed(2)}\nInterest (${bill.interestRate}%): $${interest.toFixed(2)}\nPrincipal Paid: $${principal.toFixed(2)}\n\nNew Loan Balance: $${newDebt.toFixed(2)}\n\nConfirm payment?`;
+                    if(!confirm(msg)) return;
+                } else {
+                     newDebt = bill.totalDebt - payment;
+                }
+
                 if(newDebt <= 0.01) { // Floating point safety
                     // Confetti!
                     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
