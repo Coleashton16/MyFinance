@@ -22,19 +22,18 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         .hide { display: none !important; }
         
-        /* Custom Scrollbar for Desktop feel */
+        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .dark ::-webkit-scrollbar-thumb { background: #475569; }
         
-        /* Smooth transitions */
         .trans-all { transition: all 0.2s ease-in-out; }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-100 h-screen overflow-hidden transition-colors duration-200 selection:bg-indigo-500 selection:text-white">
 
-    <!-- LOGIN SCREEN (Split Layout) -->
+    <!-- LOGIN SCREEN -->
     <div id="login-screen" class="h-screen w-full flex overflow-hidden">
         <!-- Left Side: Branding -->
         <div class="hidden lg:flex w-1/2 bg-slate-900 relative items-center justify-center p-12">
@@ -92,8 +91,7 @@
         </div>
     </div>
 
-    <!-- MAIN APP (Desktop Dashboard Layout) -->
-    <!-- UPDATED: bg-slate-50 -> bg-slate-100 for better contrast against white cards -->
+    <!-- MAIN APP -->
     <div id="main-app" class="hide h-screen flex overflow-hidden bg-slate-100 dark:bg-slate-900">
         
         <!-- SIDEBAR -->
@@ -110,11 +108,6 @@
                     <a href="#" class="flex items-center gap-4 px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl font-medium transition-colors border border-indigo-100 dark:border-indigo-500/20">
                         <i class="fa-solid fa-grid-2 text-lg w-6 text-center"></i>
                         <span class="hidden lg:block">Dashboard</span>
-                    </a>
-                    <!-- Placeholder links for aesthetic -->
-                    <a href="#" class="flex items-center gap-4 px-4 py-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl font-medium transition-colors cursor-not-allowed opacity-50">
-                        <i class="fa-solid fa-chart-pie text-lg w-6 text-center"></i>
-                        <span class="hidden lg:block">Analytics</span>
                     </a>
                 </nav>
             </div>
@@ -139,19 +132,16 @@
         <!-- MAIN CONTENT -->
         <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
             
-            <!-- Header Mobile/Desktop -->
+            <!-- Header -->
             <header class="h-16 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-6 lg:px-8 z-10 shadow-sm">
                 <h2 class="text-lg font-bold text-slate-800 dark:text-slate-200">Financial Overview</h2>
-                <div class="flex items-center gap-4">
-                    <!-- Theme Toggle Placeholder (Optional) -->
-                </div>
             </header>
 
             <!-- Scrollable Content -->
             <div class="flex-1 overflow-y-auto p-4 lg:p-8 scroll-smooth">
                 <div class="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
                     
-                    <!-- COLUMN 1: CONTROLS & STATS (Stays on top on mobile, right side on desktop) -->
+                    <!-- COLUMN 1: CONTROLS & STATS -->
                     <div class="xl:col-span-1 space-y-6 order-1 xl:order-2">
                         
                         <!-- Main Stats Card -->
@@ -181,7 +171,6 @@
                         </div>
 
                         <!-- Action Center -->
-                        <!-- UPDATED: Increased shadow and border contrast -->
                         <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-300 dark:border-slate-700 p-6">
                             <h3 class="font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                                 <i class="fa-solid fa-bolt text-yellow-500"></i> Actions
@@ -193,7 +182,6 @@
                                 <div class="flex gap-2">
                                     <div class="relative flex-1 group">
                                         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold group-focus-within:text-indigo-500 transition-colors">$</span>
-                                        <!-- UPDATED: bg-slate-50 to bg-slate-100 and border-slate-300 for input contrast -->
                                         <input id="income-input" type="number" placeholder="0.00" class="w-full pl-7 pr-4 py-3 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-lg font-bold font-mono transition-all">
                                     </div>
                                     <button id="distribute-btn" class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 rounded-xl font-bold transition-all shadow-md hover:shadow-indigo-500/30 active:scale-95" disabled>
@@ -214,14 +202,13 @@
                         </div>
                     </div>
 
-                    <!-- COLUMN 2: BILLS GRID (Takes more space) -->
+                    <!-- COLUMN 2: BILLS GRID -->
                     <div class="xl:col-span-2 order-2 xl:order-1">
                         <div class="flex justify-between items-end mb-6">
                             <div>
                                 <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100">Active Bills</h3>
                                 <p class="text-sm text-slate-500">Manage your monthly obligations.</p>
                             </div>
-                            <!-- Sort controls could go here -->
                         </div>
 
                         <!-- Grid Container for Cards -->
@@ -241,7 +228,7 @@
 
     <!-- ADD BILL MODAL -->
     <div id="add-bill-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hide transition-opacity opacity-0 opacity-100">
-        <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl p-8 shadow-2xl border border-slate-100 dark:border-slate-700 transform scale-95 transition-transform duration-200">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl p-8 shadow-2xl border border-slate-100 dark:border-slate-700 transform scale-95 transition-transform duration-200 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-2xl font-bold text-slate-800 dark:text-white">New Obligation</h3>
                 <button id="close-modal-x" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
@@ -255,7 +242,7 @@
                 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Total ($)</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Monthly Amount ($)</label>
                         <input type="number" step="0.01" id="bill-amount" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono" placeholder="150.00">
                     </div>
                     <div>
@@ -264,7 +251,31 @@
                     </div>
                 </div>
 
-                <div class="flex gap-3 pt-4">
+                <!-- DEBT TOGGLE -->
+                <div class="border-t border-b border-slate-100 dark:border-slate-700 py-4">
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" id="is-debt-checkbox" class="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 transition-colors">
+                        <span class="font-bold text-slate-700 dark:text-slate-300 group-hover:text-indigo-600 transition-colors">Is this a debt?</span>
+                        <span class="text-xs text-slate-400">(Loans, Credit Cards, etc)</span>
+                    </label>
+
+                    <div id="debt-fields" class="hidden mt-4 space-y-4 animate-fade-in">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Total Remaining Balance ($)</label>
+                            <input type="number" step="0.01" id="debt-balance" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono" placeholder="5000.00">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Interest Rate (APR %)</label>
+                            <input type="number" step="0.01" id="debt-apr" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono" placeholder="18.5">
+                        </div>
+                        <p class="text-xs text-orange-500 flex items-center gap-1">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            The "Monthly Amount" above will be your target payment.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-2">
                     <button type="button" id="cancel-add-bill" class="flex-1 py-3.5 text-slate-500 font-bold hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">Cancel</button>
                     <button type="submit" class="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all hover:scale-[1.02]">Create Bill</button>
                 </div>
@@ -310,7 +321,7 @@
         </div>
     </div>
 
-    <!-- LOGIC (Unchanged Logic, Updated Selectors where necessary for styling) -->
+    <!-- LOGIC -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -365,7 +376,13 @@
             showAddBillBtn: document.getElementById('show-add-bill-btn'),
             addBillForm: document.getElementById('add-bill-form'),
             cancelAddBill: document.getElementById('cancel-add-bill'),
-            closeModalX: document.getElementById('close-modal-x'), // Added X button
+            closeModalX: document.getElementById('close-modal-x'),
+            
+            // Debt Specifics
+            isDebtCheckbox: document.getElementById('is-debt-checkbox'),
+            debtFields: document.getElementById('debt-fields'),
+            debtBalanceInput: document.getElementById('debt-balance'),
+            debtAprInput: document.getElementById('debt-apr'),
             
             allocationModal: document.getElementById('allocation-modal'),
             previewTotalIncome: document.getElementById('preview-total-income'),
@@ -374,8 +391,7 @@
             confirmAllocation: document.getElementById('confirm-allocation')
         };
 
-        // --- AUTHENTICATION LOGIC ---
-
+        // --- AUTHENTICATION ---
         els.toggleAuthMode.addEventListener('click', (e) => {
             e.preventDefault();
             isLoginMode = !isLoginMode;
@@ -390,7 +406,6 @@
             e.preventDefault();
             const email = els.authEmail.value;
             const password = els.authPass.value;
-            
             els.authSubmitBtn.disabled = true;
             els.authSubmitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Processing...';
             els.authError.classList.add('hide');
@@ -402,7 +417,6 @@
                     await createUserWithEmailAndPassword(auth, email, password);
                 }
             } catch (error) {
-                console.error(error);
                 els.authErrorText.textContent = getErrorMessage(error.code);
                 els.authError.classList.remove('hide');
                 els.authSubmitBtn.disabled = false;
@@ -413,12 +427,9 @@
         function getErrorMessage(code) {
             switch(code) {
                 case 'auth/invalid-email': return 'Invalid email address.';
-                case 'auth/user-disabled': return 'User disabled.';
-                case 'auth/user-not-found': return 'User not found.';
                 case 'auth/wrong-password': return 'Wrong password.';
-                case 'auth/email-already-in-use': return 'Email already in use.';
-                case 'auth/weak-password': return 'Password is too weak.';
-                default: return 'Authentication failed. Please try again.';
+                case 'auth/user-not-found': return 'User not found.';
+                default: return 'Authentication failed.';
             }
         }
 
@@ -431,7 +442,6 @@
                 els.mainApp.classList.remove('hide');
                 els.userIdDisplay.textContent = `${user.email}`;
                 initDataListeners();
-                
                 // Reset Auth Form
                 els.authEmail.value = '';
                 els.authPass.value = '';
@@ -450,7 +460,7 @@
             return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
         };
 
-        // --- CORE LOGIC: THE WATERFALL ---
+        // --- WATERFALL LOGIC ---
         const calculateAllocation = (incomeAmount, billsList) => {
             let remainingIncome = parseFloat(incomeAmount);
             if (isNaN(remainingIncome) || remainingIncome <= 0) return null;
@@ -481,11 +491,15 @@
                 allocationResult.totalAllocated += amount;
             };
 
-            // Deep clone to avoid mutating state
-            let tempBills = billsList.map(b => ({
+            // Filter out Paid Off Debts
+            const activeBills = billsList.filter(b => !b.isDebt || b.currentDebtBalance > 0);
+
+            // Deep clone
+            let tempBills = activeBills.map(b => ({
                 ...b,
-                tempAllocated: b.amountAllocated,
-                remainingNeed: b.totalAmount - b.amountAllocated
+                remainingNeed: b.totalAmount - b.amountAllocated,
+                // For debts, we can't pay more than what's owed in total
+                remainingDebt: b.isDebt ? b.currentDebtBalance : Infinity
             }));
 
             const today = new Date();
@@ -503,15 +517,19 @@
 
             for (let bill of urgentBills) {
                 if (remainingIncome <= 0) break;
-                const amountToPay = Math.min(remainingIncome, bill.remainingNeed);
-                remainingIncome -= amountToPay;
-                bill.remainingNeed -= amountToPay;
-                trackAllocation(bill.id, amountToPay, 'Urgent');
+                // Cap payment at min of (Income, MonthlyNeed, TotalDebt)
+                const amountToPay = Math.min(remainingIncome, bill.remainingNeed, bill.remainingDebt);
+                if (amountToPay > 0) {
+                    remainingIncome -= amountToPay;
+                    bill.remainingNeed -= amountToPay;
+                    bill.remainingDebt -= amountToPay;
+                    trackAllocation(bill.id, amountToPay, 'Urgent');
+                }
             }
 
             // Level 2: Drip
             if (remainingIncome > 0) {
-                const drippableBills = tempBills.filter(b => b.remainingNeed > 0);
+                const drippableBills = tempBills.filter(b => b.remainingNeed > 0 && b.remainingDebt > 0);
                 if (drippableBills.length > 0) {
                     let totalDailyPressure = 0;
                     const weightedBills = drippableBills.map(bill => {
@@ -527,10 +545,12 @@
                         let incomeForDrip = remainingIncome;
                         weightedBills.forEach(bill => {
                             const share = (bill.weight / totalDailyPressure) * incomeForDrip;
-                            const actualAllocation = Math.min(share, bill.remainingNeed);
+                            // Cap payment at min of (Share, RemainingNeed, RemainingDebt)
+                            const actualAllocation = Math.min(share, bill.remainingNeed, bill.remainingDebt);
                             if (actualAllocation > 0) {
                                 remainingIncome -= actualAllocation;
                                 bill.remainingNeed -= actualAllocation;
+                                bill.remainingDebt -= actualAllocation;
                                 trackAllocation(bill.id, actualAllocation, 'Drip');
                             }
                         });
@@ -548,23 +568,18 @@
         };
 
         // --- FIRESTORE LISTENERS ---
-        let unsubscribeBills = null;
-        let unsubscribeReserve = null;
-
         function initDataListeners() {
             if (!currentUser) return;
             
-            // Bills Listener
             const billsRef = collection(db, 'artifacts', APP_ID, 'users', currentUser.uid, 'bills');
-            unsubscribeBills = onSnapshot(billsRef, (snapshot) => {
+            onSnapshot(billsRef, (snapshot) => {
                 bills = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderBills();
                 updateDashboard();
             });
 
-            // Reserve Listener
             const reserveRef = doc(db, 'artifacts', APP_ID, 'users', currentUser.uid, 'meta', 'reserve');
-            unsubscribeReserve = onSnapshot(reserveRef, (docSnap) => {
+            onSnapshot(reserveRef, (docSnap) => {
                 reserve = docSnap.exists() ? docSnap.data().amount : 0;
                 updateDashboard();
             });
@@ -573,9 +588,10 @@
         // --- RENDERING ---
         function updateDashboard() {
             els.reserveDisplay.textContent = formatCurrency(reserve);
-            
-            const totalMonthlyNeed = bills.reduce((acc, b) => acc + b.totalAmount, 0);
-            const totalAllocated = bills.reduce((acc, b) => acc + b.amountAllocated, 0);
+            // Only count active bills for monthly progress
+            const activeBills = bills.filter(b => !b.isDebt || b.currentDebtBalance > 0);
+            const totalMonthlyNeed = activeBills.reduce((acc, b) => acc + b.totalAmount, 0);
+            const totalAllocated = activeBills.reduce((acc, b) => acc + b.amountAllocated, 0);
             const progress = totalMonthlyNeed > 0 ? (totalAllocated / totalMonthlyNeed) * 100 : 0;
 
             els.totalProgress.style.width = `${progress}%`;
@@ -594,29 +610,40 @@
                             <i class="fa-solid fa-receipt text-2xl text-slate-400"></i>
                         </div>
                         <h4 class="font-bold text-lg mb-1">No bills tracked</h4>
-                        <p class="text-sm">Click "Add New Bill" to begin your waterfall.</p>
+                        <p class="text-sm">Click "Add New Bill" to begin.</p>
                     </div>`;
                 return;
             }
 
-            // Sort by due date
-            const sortedBills = [...bills].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+            // Sort: Debts with >0 balance first, then by date. Paid off debts last.
+            const sortedBills = [...bills].sort((a, b) => {
+                if (a.isDebt && a.currentDebtBalance <= 0) return 1;
+                if (b.isDebt && b.currentDebtBalance <= 0) return -1;
+                return new Date(a.dueDate) - new Date(b.dueDate);
+            });
+
             const today = new Date();
 
             sortedBills.forEach(bill => {
+                // Debt Specific Logic
+                const isDebt = bill.isDebt === true;
+                const isPaidOff = isDebt && bill.currentDebtBalance <= 0;
+                
                 const diffTime = new Date(bill.dueDate) - today;
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                const isUrgent = diffDays <= 3 && bill.amountAllocated < bill.totalAmount;
-                const isFullyFunded = bill.amountAllocated >= bill.totalAmount;
+                const isUrgent = !isPaidOff && diffDays <= 3 && bill.amountAllocated < bill.totalAmount;
+                const isFullyFunded = !isPaidOff && bill.amountAllocated >= bill.totalAmount;
                 
-                const progress = Math.min(100, Math.max(0, (bill.amountAllocated / bill.totalAmount) * 100));
+                const monthlyProgress = Math.min(100, Math.max(0, (bill.amountAllocated / bill.totalAmount) * 100));
                 
                 let statusBadge = '';
-                let barColor = 'bg-indigo-500';
-                // UPDATED: Darker border for contrast
                 let borderColor = 'border-slate-300 dark:border-slate-700';
+                let barColor = 'bg-indigo-500';
 
-                if (isFullyFunded) {
+                if (isPaidOff) {
+                    statusBadge = `<span class="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide border border-yellow-200 dark:border-yellow-800"><i class="fa-solid fa-trophy mr-1"></i> Paid Off</span>`;
+                    borderColor = 'border-yellow-300 dark:border-yellow-600 shadow-yellow-500/10';
+                } else if (isFullyFunded) {
                     statusBadge = `<span class="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide border border-green-200 dark:border-green-800">Ready</span>`;
                     barColor = 'bg-green-500';
                     borderColor = 'border-green-300 dark:border-green-900/50';
@@ -626,11 +653,33 @@
                     borderColor = 'border-red-300 dark:border-red-900/50';
                 }
 
+                // Debt Info Block
+                let debtInfoHTML = '';
+                if (isDebt && !isPaidOff) {
+                    debtInfoHTML = `
+                        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-bold text-slate-500 uppercase">Total Debt</span>
+                                <span class="text-xs font-mono text-slate-600 dark:text-slate-300">${formatCurrency(bill.currentDebtBalance)} remaining</span>
+                            </div>
+                            <div class="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden mb-2">
+                                <div class="h-full bg-purple-500" style="width: 25%"></div> <!-- Placeholder width since we don't have original loan amount, just remaining -->
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-500">APR: ${bill.apr}%</span>
+                                <button onclick="window.applyInterest('${bill.id}')" class="text-[10px] text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 font-bold flex items-center gap-1 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded hover:bg-purple-100 transition-colors">
+                                    <i class="fa-solid fa-percent"></i> Add Interest
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+
                 const el = document.createElement('div');
-                // UPDATED: Added shadow-md and increased border contrast
-                el.className = `bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-md border ${borderColor} relative group hover:shadow-lg transition-all duration-300 hover:-translate-y-1`;
+                el.className = `bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-md border ${borderColor} relative group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 ${isPaidOff ? 'opacity-75 grayscale-[0.5] hover:grayscale-0' : ''}`;
                 el.innerHTML = `
                     <div class="absolute top-4 right-4 flex gap-2">
+                        ${isDebt && !isPaidOff ? '<span class="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase border border-purple-200 dark:border-purple-800">Loan</span>' : ''}
                         ${statusBadge}
                     </div>
                     
@@ -638,22 +687,26 @@
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
 
-                    <div class="mb-4 pr-16">
+                    <div class="mb-2 pr-20">
                         <h4 class="font-bold text-lg text-slate-800 dark:text-slate-100 truncate" title="${bill.name}">${bill.name}</h4>
+                        ${!isPaidOff ? `
                         <p class="text-xs text-slate-500 flex items-center gap-1.5 mt-1 font-medium">
                             <i class="fa-regular fa-calendar ${isUrgent ? 'text-red-500' : ''}"></i> ${new Date(bill.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} (${diffDays} days)
-                        </p>
+                        </p>` : `<p class="text-xs text-green-600 font-bold mt-1">Goal Completed</p>`}
                     </div>
                     
+                    ${!isPaidOff ? `
                     <div class="flex justify-between items-end mb-2">
                          <div class="text-2xl font-bold text-slate-700 dark:text-slate-200 font-mono">${formatCurrency(bill.amountAllocated)}</div>
-                         <div class="text-xs text-slate-400 font-medium mb-1">of ${formatCurrency(bill.totalAmount)}</div>
+                         <div class="text-xs text-slate-400 font-medium mb-1">monthly target: ${formatCurrency(bill.totalAmount)}</div>
                     </div>
 
-                    <!-- UPDATED: bg-slate-200 for better track contrast -->
                     <div class="h-2.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden shadow-inner">
-                        <div class="h-full ${barColor} transition-all duration-1000 ease-out" style="width: ${progress}%"></div>
+                        <div class="h-full ${barColor} transition-all duration-1000 ease-out" style="width: ${monthlyProgress}%"></div>
                     </div>
+                    ` : ''}
+
+                    ${debtInfoHTML}
                 `;
                 els.billsContainer.appendChild(el);
             });
@@ -661,21 +714,25 @@
 
         // --- INTERACTIONS ---
         
-        // Income Input
-        els.incomeInput.addEventListener('input', (e) => {
-            els.distributeBtn.disabled = !e.target.value || parseFloat(e.target.value) <= 0;
+        // Modal Logic
+        els.isDebtCheckbox.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                els.debtFields.classList.remove('hidden');
+                els.debtBalanceInput.required = true;
+                els.debtAprInput.required = true;
+            } else {
+                els.debtFields.classList.add('hidden');
+                els.debtBalanceInput.required = false;
+                els.debtAprInput.required = false;
+            }
         });
 
-        els.distributeBtn.addEventListener('click', () => {
-            const amount = parseFloat(els.incomeInput.value);
-            if (!amount) return;
-            currentAllocation = calculateAllocation(amount, bills);
-            renderAllocationPreview();
-            els.allocationModal.classList.remove('hide');
+        // Add Bill
+        els.showAddBillBtn.addEventListener('click', () => {
+            els.addBillModal.classList.remove('hide');
+            els.isDebtCheckbox.checked = false;
+            els.debtFields.classList.add('hidden');
         });
-
-        // Add Bill Modal
-        els.showAddBillBtn.addEventListener('click', () => els.addBillModal.classList.remove('hide'));
         
         const closeModal = () => els.addBillModal.classList.add('hide');
         els.cancelAddBill.addEventListener('click', closeModal);
@@ -688,18 +745,32 @@
             const name = document.getElementById('bill-name').value;
             const amount = parseFloat(document.getElementById('bill-amount').value);
             const date = document.getElementById('bill-date').value;
-            const submitBtn = els.addBillForm.querySelector('button[type="submit"]');
             
+            const isDebt = els.isDebtCheckbox.checked;
+            let debtData = {};
+            
+            if (isDebt) {
+                debtData = {
+                    isDebt: true,
+                    currentDebtBalance: parseFloat(els.debtBalanceInput.value),
+                    apr: parseFloat(els.debtAprInput.value)
+                };
+            } else {
+                debtData = { isDebt: false };
+            }
+
+            const submitBtn = els.addBillForm.querySelector('button[type="submit"]');
             submitBtn.textContent = 'Saving...';
             submitBtn.disabled = true;
 
             try {
                 await setDoc(doc(collection(db, 'artifacts', APP_ID, 'users', currentUser.uid, 'bills')), {
                     name,
-                    totalAmount: amount,
+                    totalAmount: amount, // Monthly Target
                     amountAllocated: 0,
                     dueDate: date,
-                    createdAt: serverTimestamp()
+                    createdAt: serverTimestamp(),
+                    ...debtData
                 });
                 els.addBillForm.reset();
                 closeModal();
@@ -712,15 +783,102 @@
             }
         });
 
-        // Global delete function
+        // Income Logic
+        els.incomeInput.addEventListener('input', (e) => {
+            els.distributeBtn.disabled = !e.target.value || parseFloat(e.target.value) <= 0;
+        });
+
+        els.distributeBtn.addEventListener('click', () => {
+            const amount = parseFloat(els.incomeInput.value);
+            if (!amount) return;
+            currentAllocation = calculateAllocation(amount, bills);
+            renderAllocationPreview();
+            els.allocationModal.classList.remove('hide');
+        });
+
+        // Allocation Actions
+        els.cancelAllocation.addEventListener('click', () => els.allocationModal.classList.add('hide'));
+        
+        els.confirmAllocation.addEventListener('click', async () => {
+            if (!currentUser || !currentAllocation) return;
+            
+            const btn = els.confirmAllocation;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Processing';
+            btn.disabled = true;
+
+            try {
+                await runTransaction(db, async (transaction) => {
+                    // Update Bills & Debts
+                    for (const item of currentAllocation.breakdown) {
+                        const billRef = doc(db, 'artifacts', APP_ID, 'users', currentUser.uid, 'bills', item.id);
+                        const billSnap = await transaction.get(billRef);
+                        if (!billSnap.exists()) continue;
+                        
+                        const updates = { amountAllocated: increment(item.amount) };
+                        
+                        // If it's a debt, reduce the principal
+                        if (billSnap.data().isDebt) {
+                            updates.currentDebtBalance = increment(-item.amount);
+                        }
+                        
+                        transaction.update(billRef, updates);
+                    }
+                    
+                    // Update Reserve
+                    if (currentAllocation.reserve > 0) {
+                        const reserveRef = doc(db, 'artifacts', APP_ID, 'users', currentUser.uid, 'meta', 'reserve');
+                        const reserveDoc = await transaction.get(reserveRef);
+                        if (reserveDoc.exists()) {
+                            transaction.update(reserveRef, { amount: increment(currentAllocation.reserve) });
+                        } else {
+                            transaction.set(reserveRef, { amount: currentAllocation.reserve });
+                        }
+                    }
+                });
+
+                els.incomeInput.value = '';
+                els.distributeBtn.disabled = true;
+                els.allocationModal.classList.add('hide');
+                currentAllocation = null;
+            } catch (error) {
+                console.error("Transaction failed: ", error);
+                alert("Failed to save allocation.");
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+
+        // --- GLOBAL FUNCTIONS ---
+        
         window.deleteBill = async (id) => {
-            if(!confirm("Are you sure? Funds allocated to this bill will be deleted (they won't return to reserve automatically).")) return;
+            if(!confirm("Are you sure? Funds allocated to this bill will be deleted.")) return;
             try {
                 await deleteDoc(doc(db, 'artifacts', APP_ID, 'users', currentUser.uid, 'bills', id));
             } catch (e) { console.error(e); }
         };
 
-        // Allocation Modal
+        window.applyInterest = async (id) => {
+            const bill = bills.find(b => b.id === id);
+            if (!bill || !bill.isDebt) return;
+            
+            // Formula: Balance * (APR / 100) / 12
+            const interest = (bill.currentDebtBalance * (bill.apr / 100)) / 12;
+            const confirmed = confirm(`Add one month of interest?\n\nBalance: ${formatCurrency(bill.currentDebtBalance)}\nAPR: ${bill.apr}%\n\nInterest Amount: ${formatCurrency(interest)}`);
+            
+            if (confirmed) {
+                try {
+                    const billRef = doc(db, 'artifacts', APP_ID, 'users', currentUser.uid, 'bills', id);
+                    await updateDoc(billRef, { currentDebtBalance: increment(interest) });
+                } catch (e) {
+                    console.error(e);
+                    alert("Failed to apply interest");
+                }
+            }
+        };
+
+        // Render logic for preview modal
         function renderAllocationPreview() {
             if (!currentAllocation) return;
             els.previewTotalIncome.textContent = formatCurrency(parseFloat(els.incomeInput.value));
@@ -767,48 +925,6 @@
                 els.allocationList.appendChild(div);
             }
         }
-
-        els.cancelAllocation.addEventListener('click', () => els.allocationModal.classList.add('hide'));
-        
-        els.confirmAllocation.addEventListener('click', async () => {
-            if (!currentUser || !currentAllocation) return;
-            
-            const btn = els.confirmAllocation;
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Processing';
-            btn.disabled = true;
-
-            try {
-                await runTransaction(db, async (transaction) => {
-                    // Update Bills
-                    for (const item of currentAllocation.breakdown) {
-                        const billRef = doc(db, 'artifacts', APP_ID, 'users', currentUser.uid, 'bills', item.id);
-                        transaction.update(billRef, { amountAllocated: increment(item.amount) });
-                    }
-                    // Update Reserve
-                    if (currentAllocation.reserve > 0) {
-                        const reserveRef = doc(db, 'artifacts', APP_ID, 'users', currentUser.uid, 'meta', 'reserve');
-                        const reserveDoc = await transaction.get(reserveRef);
-                        if (reserveDoc.exists()) {
-                            transaction.update(reserveRef, { amount: increment(currentAllocation.reserve) });
-                        } else {
-                            transaction.set(reserveRef, { amount: currentAllocation.reserve });
-                        }
-                    }
-                });
-
-                els.incomeInput.value = '';
-                els.distributeBtn.disabled = true;
-                els.allocationModal.classList.add('hide');
-                currentAllocation = null;
-            } catch (error) {
-                console.error("Transaction failed: ", error);
-                alert("Failed to save allocation.");
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        });
 
     </script>
 </body>
