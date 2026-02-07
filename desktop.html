@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Micro-Allocator | Desktop</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#151f32' } // Custom darker slate
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .hide { display: none !important; }
+        
+        /* Custom Scrollbar for Desktop feel */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        
+        /* Smooth transitions */
+        .trans-all { transition: all 0.2s ease-in-out; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-100 h-screen overflow-hidden transition-colors duration-200 selection:bg-indigo-500 selection:text-white">
+
+    <!-- LOGIN SCREEN (Split Layout) -->
+    <div id="login-screen" class="h-screen w-full flex overflow-hidden">
+        <!-- Left Side: Branding -->
+        <div class="hidden lg:flex w-1/2 bg-slate-900 relative items-center justify-center p-12">
+            <div class="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-900 via-slate-900 to-black"></div>
+            <div class="relative z-10 text-center">
+                <div class="bg-indigo-500 w-24 h-24 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-indigo-500/20">
+                    <i class="fa-solid fa-chart-line text-white text-4xl"></i>
+                </div>
+                <h1 class="text-5xl font-bold text-white mb-4 tracking-tight">Micro-Allocator</h1>
+                <p class="text-indigo-200 text-lg max-w-md mx-auto leading-relaxed">Advanced waterfall budgeting logic designed for irregular income streams. visualize your flow.</p>
+            </div>
+        </div>
+
+        <!-- Right Side: Form -->
+        <div class="w-full lg:w-1/2 bg-white dark:bg-slate-800 flex items-center justify-center p-8">
+            <div class="w-full max-w-md">
+                <div class="lg:hidden text-center mb-8">
+                    <div class="bg-indigo-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa-solid fa-chart-line text-white text-2xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold">Micro-Allocator</h1>
+                </div>
+
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold mb-2">Welcome back</h2>
+                    <p class="text-slate-500 dark:text-slate-400">Please enter your details to sign in.</p>
+                </div>
+
+                <form id="auth-form" class="space-y-5">
+                    <div id="auth-error" class="hide bg-red-500/10 border border-red-500/50 text-red-600 dark:text-red-400 text-sm p-4 rounded-lg flex items-center gap-2">
+                        <i class="fa-solid fa-circle-exclamation"></i> <span id="auth-error-text"></span>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-slate-500 dark:text-slate-400 text-sm font-bold mb-2">Email</label>
+                        <input type="email" id="email" required class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl p-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="name@company.com">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-slate-500 dark:text-slate-400 text-sm font-bold mb-2">Password</label>
+                        <input type="password" id="password" required minlength="6" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl p-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="••••••••">
+                    </div>
+
+                    <button type="submit" id="auth-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 flex items-center justify-center gap-2 transform active:scale-95">
+                        Sign In
+                    </button>
+                </form>
+
+                <div class="mt-8 text-center border-t border-slate-100 dark:border-slate-700 pt-6">
+                    <button id="toggle-auth-mode" class="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 text-sm transition-colors font-medium">
+                        Need an account? <span class="text-indigo-600 dark:text-indigo-400 font-bold">Create one</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP (Desktop Dashboard Layout) -->
+    <div id="main-app" class="hide h-screen flex overflow-hidden bg-slate-50 dark:bg-slate-900">
+        
+        <!-- SIDEBAR -->
+        <aside class="w-20 lg:w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col justify-between flex-shrink-0 z-20 transition-all duration-300">
+            <div>
+                <div class="h-20 flex items-center justify-center lg:justify-start lg:px-6 border-b border-slate-100 dark:border-slate-700/50">
+                    <div class="bg-indigo-600 text-white p-2 rounded-lg mr-0 lg:mr-3 shadow-lg shadow-indigo-500/20">
+                        <i class="fa-solid fa-droplet text-xl"></i>
+                    </div>
+                    <span class="hidden lg:block font-bold text-xl tracking-tight">Waterfall</span>
+                </div>
+
+                <nav class="p-4 space-y-2">
+                    <a href="#" class="flex items-center gap-4 px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl font-medium transition-colors">
+                        <i class="fa-solid fa-grid-2 text-lg w-6 text-center"></i>
+                        <span class="hidden lg:block">Dashboard</span>
+                    </a>
+                    <!-- Placeholder links for aesthetic -->
+                    <a href="#" class="flex items-center gap-4 px-4 py-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl font-medium transition-colors cursor-not-allowed opacity-50">
+                        <i class="fa-solid fa-chart-pie text-lg w-6 text-center"></i>
+                        <span class="hidden lg:block">Analytics</span>
+                    </a>
+                </nav>
+            </div>
+
+            <div class="p-4 border-t border-slate-100 dark:border-slate-700">
+                <div class="flex items-center gap-3 mb-4 px-2">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
+                        ID
+                    </div>
+                    <div class="hidden lg:block overflow-hidden">
+                        <p class="text-xs font-bold text-slate-700 dark:text-slate-200">Logged In</p>
+                        <p id="user-id-display" class="text-[10px] text-slate-400 truncate w-32">Loading...</p>
+                    </div>
+                </div>
+                <button id="logout-btn" class="w-full flex items-center justify-center lg:justify-start gap-3 px-4 py-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-all text-sm font-bold">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span class="hidden lg:block">Log Out</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
+            
+            <!-- Header Mobile/Desktop -->
+            <header class="h-16 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-6 lg:px-8 z-10">
+                <h2 class="text-lg font-bold text-slate-700 dark:text-slate-200">Financial Overview</h2>
+                <div class="flex items-center gap-4">
+                    <!-- Theme Toggle Placeholder (Optional) -->
+                </div>
+            </header>
+
+            <!-- Scrollable Content -->
+            <div class="flex-1 overflow-y-auto p-4 lg:p-8 scroll-smooth">
+                <div class="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
+                    
+                    <!-- COLUMN 1: CONTROLS & STATS (Stays on top on mobile, right side on desktop) -->
+                    <div class="xl:col-span-1 space-y-6 order-1 xl:order-2">
+                        
+                        <!-- Main Stats Card -->
+                        <div class="bg-gradient-to-br from-indigo-600 to-purple-800 rounded-2xl p-6 lg:p-8 text-white shadow-xl shadow-indigo-900/20 relative overflow-hidden group">
+                            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
+                                <i class="fa-solid fa-wallet text-9xl"></i>
+                            </div>
+                            
+                            <div class="relative z-10">
+                                <p class="text-indigo-200 font-medium mb-1">General Reserve</p>
+                                <h2 id="reserve-display" class="text-4xl lg:text-5xl font-bold tracking-tight mb-6">$0.00</h2>
+                                
+                                <div class="bg-black/20 rounded-xl p-4 backdrop-blur-sm border border-white/10">
+                                    <div class="flex justify-between text-sm text-indigo-100 mb-2">
+                                        <span class="font-medium">Monthly Goal</span>
+                                        <span id="progress-text" class="bg-indigo-500/50 px-2 py-0.5 rounded text-xs font-bold">0%</span>
+                                    </div>
+                                    <div class="h-3 w-full bg-indigo-900/50 rounded-full overflow-hidden mb-3">
+                                        <div id="total-progress-bar" class="h-full bg-gradient-to-r from-indigo-300 to-white shadow-[0_0_10px_rgba(255,255,255,0.5)] transition-all duration-700 ease-out" style="width: 0%"></div>
+                                    </div>
+                                    <div class="flex justify-between text-xs">
+                                        <span class="opacity-70">Needs: <span id="total-needs" class="font-mono">$0.00</span></span>
+                                        <span class="font-bold text-white"><span id="total-allocated" class="font-mono">$0.00</span> Funded</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Center -->
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                            <h3 class="font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-bolt text-yellow-500"></i> Actions
+                            </h3>
+                            
+                            <!-- Income Input -->
+                            <div class="mb-4">
+                                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Inject Income</label>
+                                <div class="flex gap-2">
+                                    <div class="relative flex-1 group">
+                                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold group-focus-within:text-indigo-500 transition-colors">$</span>
+                                        <input id="income-input" type="number" placeholder="0.00" class="w-full pl-7 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-lg font-bold font-mono transition-all">
+                                    </div>
+                                    <button id="distribute-btn" class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 rounded-xl font-bold transition-all shadow-md hover:shadow-indigo-500/30 active:scale-95" disabled>
+                                        Distribute
+                                    </button>
+                                </div>
+                            </div>
+
+                            <hr class="border-slate-100 dark:border-slate-700 my-4">
+
+                            <!-- Add Bill Button -->
+                            <button id="show-add-bill-btn" class="w-full py-3 border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-500 hover:border-indigo-500 hover:text-indigo-500 rounded-xl font-bold transition-all flex items-center justify-center gap-2 group">
+                                <span class="bg-slate-200 dark:bg-slate-700 group-hover:bg-indigo-500 group-hover:text-white w-6 h-6 rounded-full flex items-center justify-center transition-colors">
+                                    <i class="fa-solid fa-plus text-xs"></i>
+                                </span>
+                                Add New Bill
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- COLUMN 2: BILLS GRID (Takes more space) -->
+                    <div class="xl:col-span-2 order-2 xl:order-1">
+                        <div class="flex justify-between items-end mb-6">
+                            <div>
+                                <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100">Active Bills</h3>
+                                <p class="text-sm text-slate-500">Manage your monthly obligations.</p>
+                            </div>
+                            <!-- Sort controls could go here -->
+                        </div>
+
+                        <!-- Grid Container for Cards -->
+                        <div id="bills-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 pb-20">
+                            <!-- Loading State -->
+                            <div class="col-span-full py-20 text-center text-slate-400 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
+                                <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-4 text-indigo-500"></i>
+                                <p>Syncing your data...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ADD BILL MODAL -->
+    <div id="add-bill-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hide transition-opacity opacity-0 opacity-100">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl p-8 shadow-2xl border border-slate-100 dark:border-slate-700 transform scale-95 transition-transform duration-200">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-slate-800 dark:text-white">New Obligation</h3>
+                <button id="close-modal-x" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            
+            <form id="add-bill-form" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Bill Name</label>
+                    <input type="text" id="bill-name" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="e.g. Electric Bill">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Total ($)</label>
+                        <input type="number" step="0.01" id="bill-amount" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono" placeholder="150.00">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Due Date</label>
+                        <input type="date" id="bill-date" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" id="cancel-add-bill" class="flex-1 py-3.5 text-slate-500 font-bold hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">Cancel</button>
+                    <button type="submit" class="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all hover:scale-[1.02]">Create Bill</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ALLOCATION PREVIEW MODAL -->
+    <div id="allocation-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hide">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
+                <div class="flex items-center gap-3 mb-1">
+                    <div class="bg-green-100 text-green-600 p-2 rounded-lg">
+                        <i class="fa-solid fa-money-bill-transfer"></i>
+                    </div>
+                    <h3 class="font-bold text-xl text-slate-800 dark:text-white">Allocation Plan</h3>
+                </div>
+                <p class="text-sm text-slate-500 ml-11">Review where your money will flow.</p>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                <div class="flex items-center justify-between bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                    <span class="text-emerald-700 dark:text-emerald-400 font-medium">Total Income Injection</span>
+                    <span class="font-bold text-2xl text-emerald-700 dark:text-emerald-400 font-mono" id="preview-total-income">$0.00</span>
+                </div>
+
+                <div>
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Distribution Breakdown</h4>
+                    <div id="allocation-list" class="space-y-2">
+                        <!-- Items injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex gap-4">
+                <button id="cancel-allocation" class="px-6 py-3 text-slate-600 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                    Back
+                </button>
+                <button id="confirm-allocation" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/30 transition-all flex justify-center items-center gap-2 transform active:scale-[0.98]">
+                    Confirm Distribution <i class="fa-solid fa-check"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGIC (Unchanged Logic, Updated Selectors where necessary for styling) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, updateDoc, increment, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- CONFIGURATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBalSGWdrzYB0XH8cw-tcEqT_7uUssjAtY",
+            authDomain: "studio-4711143268-e528e.firebaseapp.com",
+            projectId: "studio-4711143268-e528e",
+            storageBucket: "studio-4711143268-e528e.firebasestorage.app",
+            messagingSenderId: "987198081063",
+            appId: "1:987198081063:web:25138486f6512d022d6602"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const APP_ID = "micro-allocator-v1";
+
+        // --- STATE ---
+        let currentUser = null;
+        let bills = [];
+        let reserve = 0;
+        let currentAllocation = null;
+        let isLoginMode = true;
+
+        // --- DOM ELEMENTS ---
+        const els = {
+            loginScreen: document.getElementById('login-screen'),
+            mainApp: document.getElementById('main-app'),
+            authForm: document.getElementById('auth-form'),
+            authEmail: document.getElementById('email'),
+            authPass: document.getElementById('password'),
+            authSubmitBtn: document.getElementById('auth-submit-btn'),
+            authError: document.getElementById('auth-error'),
+            authErrorText: document.getElementById('auth-error-text'),
+            toggleAuthMode: document.getElementById('toggle-auth-mode'),
+            logoutBtn: document.getElementById('logout-btn'),
+            userIdDisplay: document.getElementById('user-id-display'),
+            reserveDisplay: document.getElementById('reserve-display'),
+            totalProgress: document.getElementById('total-progress-bar'),
+            progressText: document.getElementById('progress-text'),
+            totalNeeds: document.getElementById('total-needs'),
+            totalAllocated: document.getElementById('total-allocated'),
+            incomeInput: document.getElementById('income-input'),
+            distributeBtn: document.getElementById('distribute-btn'),
+            billsContainer: document.getElementById('bills-container'),
+            
+            // Modals
+            addBillModal: document.getElementById('add-bill-modal'),
+            showAddBillBtn: document.getElementById('show-add-bill-btn'),
+            addBillForm: document.getElementById('add-bill-form'),
+            cancelAddBill: document.getElementById('cancel-add-bill'),
+            closeModalX: document.getElementById('close-modal-x'), // Added X button
+            
+            allocationModal: document.getElementById('allocation-modal'),
+            previewTotalIncome: document.getElementById('preview-total-income'),
+            allocationList: document.getElementById('allocation-list'),
+            cancelAllocation: document.getElementById('cancel-allocation'),
+            confirmAllocation: document.getElementById('confirm-allocation')
+        };
+
+        // --- AUTHENTICATION LOGIC ---
+
+        els.toggleAuthMode.addEventListener('click', (e) => {
+            e.preventDefault();
+            isLoginMode = !isLoginMode;
+            els.authSubmitBtn.textContent = isLoginMode ? 'Sign In' : 'Create Account';
+            els.toggleAuthMode.innerHTML = isLoginMode 
+                ? 'Need an account? <span class="text-indigo-600 dark:text-indigo-400 font-bold">Create one</span>'
+                : 'Already have an account? <span class="text-indigo-600 dark:text-indigo-400 font-bold">Sign In</span>';
+            els.authError.classList.add('hide');
+        });
+
+        els.authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = els.authEmail.value;
+            const password = els.authPass.value;
+            
+            els.authSubmitBtn.disabled = true;
+            els.authSubmitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Processing...';
+            els.authError.classList.add('hide');
+
+            try {
+                if (isLoginMode) {
+                    await signInWithEmailAndPassword(auth, email, password);
+                } else {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                }
+            } catch (error) {
+                console.error(error);
+                els.authErrorText.textContent = getErrorMessage(error.code);
+                els.authError.classList.remove('hide');
+                els.authSubmitBtn.disabled = false;
+                els.authSubmitBtn.textContent = isLoginMode ? 'Sign In' : 'Create Account';
+            }
+        });
+
+        function getErrorMessage(code) {
+            switch(code) {
+                case 'auth/invalid-email': return 'Invalid email address.';
+                case 'auth/user-disabled': return 'User disabled.';
+                case 'auth/user-not-found': return 'User not found.';
+                case 'auth/wrong-password': return 'Wrong password.';
+                case 'auth/email-already-in-use': return 'Email already in use.';
+                case 'auth/weak-password': return 'Password is too weak.';
+                default: return 'Authentication failed. Please try again.';
+            }
+        }
+
+        els.logoutBtn.addEventListener('click', () => signOut(auth));
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                els.loginScreen.classList.add('hide');
+                els.mainApp.classList.remove('hide');
+                els.userIdDisplay.textContent = `${user.email}`;
+                initDataListeners();
+                
+                // Reset Auth Form
+                els.authEmail.value = '';
+                els.authPass.value = '';
+                els.authSubmitBtn.disabled = false;
+                els.authSubmitBtn.textContent = 'Sign In';
+            } else {
+                els.loginScreen.classList.remove('hide');
+                els.mainApp.classList.add('hide');
+                bills = [];
+                reserve = 0;
+            }
+        });
+
+        // --- FORMATTING HELPERS ---
+        const formatCurrency = (amount) => {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+        };
+
+        // --- CORE LOGIC: THE WATERFALL ---
+        const calculateAllocation = (incomeAmount, billsList) => {
+            let remainingIncome = parseFloat(incomeAmount);
+            if (isNaN(remainingIncome) || remainingIncome <= 0) return null;
+
+            const allocationResult = {
+                breakdown: [],
+                reserve: 0,
+                totalAllocated: 0
+            };
+
+            const trackAllocation = (billId, amount, stage) => {
+                if (amount <= 0.01) return;
+                const existing = allocationResult.breakdown.find(b => b.id === billId);
+                if (existing) {
+                    existing.amount += amount;
+                    existing.stages.push(stage);
+                } else {
+                    const bill = billsList.find(b => b.id === billId);
+                    allocationResult.breakdown.push({
+                        id: billId,
+                        name: bill.name,
+                        amount: amount,
+                        stages: [stage],
+                        current: bill.amountAllocated,
+                        total: bill.totalAmount
+                    });
+                }
+                allocationResult.totalAllocated += amount;
+            };
+
+            // Deep clone to avoid mutating state
+            let tempBills = billsList.map(b => ({
+                ...b,
+                tempAllocated: b.amountAllocated,
+                remainingNeed: b.totalAmount - b.amountAllocated
+            }));
+
+            const today = new Date();
+            today.setHours(0,0,0,0);
+
+            // Level 1: Urgent
+            const urgentBills = tempBills.filter(bill => {
+                if (bill.remainingNeed <= 0) return false;
+                const dueDate = new Date(bill.dueDate);
+                const diffTime = dueDate - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                return diffDays <= 3;
+            });
+            urgentBills.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+            for (let bill of urgentBills) {
+                if (remainingIncome <= 0) break;
+                const amountToPay = Math.min(remainingIncome, bill.remainingNeed);
+                remainingIncome -= amountToPay;
+                bill.remainingNeed -= amountToPay;
+                trackAllocation(bill.id, amountToPay, 'Urgent');
+            }
+
+            // Level 2: Drip
+            if (remainingIncome > 0) {
+                const drippableBills = tempBills.filter(b => b.remainingNeed > 0);
+                if (drippableBills.length > 0) {
+                    let totalDailyPressure = 0;
+                    const weightedBills = drippableBills.map(bill => {
+                        const dueDate = new Date(bill.dueDate);
+                        const diffTime = dueDate - today;
+                        const daysUntil = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+                        const dailyNeed = bill.remainingNeed / daysUntil;
+                        totalDailyPressure += dailyNeed;
+                        return { ...bill, weight: dailyNeed };
+                    });
+
+                    if (totalDailyPressure > 0) {
+                        let incomeForDrip = remainingIncome;
+                        weightedBills.forEach(bill => {
+                            const share = (bill.weight / totalDailyPressure) * incomeForDrip;
+                            const actualAllocation = Math.min(share, bill.remainingNeed);
+                            if (actualAllocation > 0) {
+                                remainingIncome -= actualAllocation;
+                                bill.remainingNeed -= actualAllocation;
+                                trackAllocation(bill.id, actualAllocation, 'Drip');
+                            }
+                        });
+                    }
+                }
+            }
+
+            // Level 3: Reserve
+            if (remainingIncome > 0) {
+                allocationResult.reserve = remainingIncome;
+                allocationResult.totalAllocated += remainingIncome;
+            }
+
+            return allocationResult;
+        };
+
+        // --- FIRESTORE LISTENERS ---
+        let unsubscribeBills = null;
+        let unsubscribeReserve = null;
+
+        function initDataListeners() {
+            if (!currentUser) return;
+            
+            // Bills Listener
+            const billsRef = collection(db, 'artifacts', APP_ID, 'users', currentUser.uid, 'bills');
+            unsubscribeBills = onSnapshot(billsRef, (snapshot) => {
+                bills = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderBills();
+                updateDashboard();
+            });
+
+            // Reserve Listener
+            const reserveRef = doc(db, 'artifacts', APP_ID, 'users', currentUser.uid, 'meta', 'reserve');
+            unsubscribeReserve = onSnapshot(reserveRef, (docSnap) => {
+                reserve = docSnap.exists() ? docSnap.data().amount : 0;
+                updateDashboard();
+            });
+        }
+
+        // --- RENDERING ---
+        function updateDashboard() {
+            els.reserveDisplay.textContent = formatCurrency(reserve);
+            
+            const totalMonthlyNeed = bills.reduce((acc, b) => acc + b.totalAmount, 0);
+            const totalAllocated = bills.reduce((acc, b) => acc + b.amountAllocated, 0);
+            const progress = totalMonthlyNeed > 0 ? (totalAllocated / totalMonthlyNeed) * 100 : 0;
+
+            els.totalProgress.style.width = `${progress}%`;
+            els.progressText.textContent = `${Math.round(progress)}%`;
+            els.totalNeeds.textContent = formatCurrency(totalMonthlyNeed);
+            els.totalAllocated.textContent = formatCurrency(totalAllocated);
+        }
+
+        function renderBills() {
+            els.billsContainer.innerHTML = '';
+            
+            if (bills.length === 0) {
+                els.billsContainer.innerHTML = `
+                    <div class="col-span-full text-center py-20 text-slate-400 bg-white dark:bg-slate-800 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700">
+                        <div class="mb-4 bg-slate-100 dark:bg-slate-700 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                            <i class="fa-solid fa-receipt text-2xl text-slate-400"></i>
+                        </div>
+                        <h4 class="font-bold text-lg mb-1">No bills tracked</h4>
+                        <p class="text-sm">Click "Add New Bill" to begin your waterfall.</p>
+                    </div>`;
+                return;
+            }
+
+            // Sort by due date
+            const sortedBills = [...bills].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+            const today = new Date();
+
+            sortedBills.forEach(bill => {
+                const diffTime = new Date(bill.dueDate) - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const isUrgent = diffDays <= 3 && bill.amountAllocated < bill.totalAmount;
+                const isFullyFunded = bill.amountAllocated >= bill.totalAmount;
+                
+                const progress = Math.min(100, Math.max(0, (bill.amountAllocated / bill.totalAmount) * 100));
+                
+                let statusBadge = '';
+                let barColor = 'bg-indigo-500';
+                let borderColor = 'border-slate-200 dark:border-slate-700';
+
+                if (isFullyFunded) {
+                    statusBadge = `<span class="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide">Ready</span>`;
+                    barColor = 'bg-green-500';
+                    borderColor = 'border-green-200 dark:border-green-900/50';
+                } else if (isUrgent) {
+                    statusBadge = `<span class="bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide animate-pulse">Due Soon</span>`;
+                    barColor = 'bg-red-500';
+                    borderColor = 'border-red-200 dark:border-red-900/50';
+                }
+
+                const el = document.createElement('div');
+                el.className = `bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border ${borderColor} relative group hover:shadow-md transition-all duration-300 hover:-translate-y-1`;
+                el.innerHTML = `
+                    <div class="absolute top-4 right-4 flex gap-2">
+                        ${statusBadge}
+                    </div>
+                    
+                    <button onclick="window.deleteBill('${bill.id}')" class="absolute bottom-4 right-4 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100" title="Delete Bill">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+
+                    <div class="mb-4 pr-16">
+                        <h4 class="font-bold text-lg text-slate-800 dark:text-slate-100 truncate" title="${bill.name}">${bill.name}</h4>
+                        <p class="text-xs text-slate-500 flex items-center gap-1.5 mt-1 font-medium">
+                            <i class="fa-regular fa-calendar ${isUrgent ? 'text-red-400' : ''}"></i> ${new Date(bill.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} (${diffDays} days)
+                        </p>
+                    </div>
+                    
+                    <div class="flex justify-between items-end mb-2">
+                         <div class="text-2xl font-bold text-slate-700 dark:text-slate-200 font-mono">${formatCurrency(bill.amountAllocated)}</div>
+                         <div class="text-xs text-slate-400 font-medium mb-1">of ${formatCurrency(bill.totalAmount)}</div>
+                    </div>
+
+                    <div class="h-2.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div class="h-full ${barColor} transition-all duration-1000 ease-out" style="width: ${progress}%"></div>
+                    </div>
+                `;
+                els.billsContainer.appendChild(el);
+            });
+        }
+
+        // --- INTERACTIONS ---
+        
+        // Income Input
+        els.incomeInput.addEventListener('input', (e) => {
+            els.distributeBtn.disabled = !e.target.value || parseFloat(e.target.value) <= 0;
+        });
+
+        els.distributeBtn.addEventListener('click', () => {
+            const amount = parseFloat(els.incomeInput.value);
+            if (!amount) return;
+            currentAllocation = calculateAllocation(amount, bills);
+            renderAllocationPreview();
+            els.allocationModal.classList.remove('hide');
+        });
+
+        // Add Bill Modal
+        els.showAddBillBtn.addEventListener('click', () => els.addBillModal.classList.remove('hide'));
+        
+        const closeModal = () => els.addBillModal.classList.add('hide');
+        els.cancelAddBill.addEventListener('click', closeModal);
+        els.closeModalX?.addEventListener('click', closeModal);
+        
+        els.addBillForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser) return;
+
+            const name = document.getElementById('bill-name').value;
+            const amount = parseFloat(document.getElementById('bill-amount').value);
+            const date = document.getElementById('bill-date').value;
+            const submitBtn = els.addBillForm.querySelector('button[type="submit"]');
+            
+            submitBtn.textContent = 'Saving...';
+            submitBtn.disabled = true;
+
+            try {
+                await setDoc(doc(collection(db, 'artifacts', APP_ID, 'users', currentUser.uid, 'bills')), {
+                    name,
+                    totalAmount: amount,
+                    amountAllocated: 0,
+                    dueDate: date,
+                    createdAt: serverTimestamp()
+                });
+                els.addBillForm.reset();
+                closeModal();
+            } catch (err) {
+                console.error(err);
+                alert("Error adding bill");
+            } finally {
+                submitBtn.textContent = 'Create Bill';
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Global delete function
+        window.deleteBill = async (id) => {
+            if(!confirm("Are you sure? Funds allocated to this bill will be deleted (they won't return to reserve automatically).")) return;
+            try {
+                await deleteDoc(doc(db, 'artifacts', APP_ID, 'users', currentUser.uid, 'bills', id));
+            } catch (e) { console.error(e); }
+        };
+
+        // Allocation Modal
+        function renderAllocationPreview() {
+            if (!currentAllocation) return;
+            els.previewTotalIncome.textContent = formatCurrency(parseFloat(els.incomeInput.value));
+            els.allocationList.innerHTML = '';
+
+            if (currentAllocation.breakdown.length === 0 && currentAllocation.reserve === 0) {
+                 els.allocationList.innerHTML = '<p class="text-center text-slate-500 py-4 italic">Amount too small to allocate significantly.</p>';
+                 return;
+            }
+
+            currentAllocation.breakdown.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center py-3 border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30 px-2 rounded-lg transition-colors';
+                
+                let tags = '';
+                if (item.stages.includes('Urgent')) tags += `<span class="text-[10px] bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded mr-1 font-bold uppercase">Urgent Fill</span>`;
+                if (item.stages.includes('Drip')) tags += `<span class="text-[10px] bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 rounded font-bold uppercase">Daily Drip</span>`;
+
+                div.innerHTML = `
+                    <div>
+                        <div class="font-bold text-slate-700 dark:text-slate-200 text-sm">${item.name}</div>
+                        <div class="flex gap-1 mt-1">${tags}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold text-emerald-600 dark:text-emerald-400 font-mono">+${formatCurrency(item.amount)}</div>
+                        <div class="text-xs text-slate-400">New Total: ${formatCurrency(item.current + item.amount)}</div>
+                    </div>
+                `;
+                els.allocationList.appendChild(div);
+            });
+
+            if (currentAllocation.reserve > 0) {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center py-3 bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg mt-3 border border-indigo-100 dark:border-indigo-900/30';
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="bg-indigo-100 dark:bg-indigo-800 p-1.5 rounded text-indigo-600 dark:text-indigo-300">
+                             <i class="fa-solid fa-piggy-bank text-sm"></i>
+                        </div>
+                        <span class="font-bold text-sm text-indigo-900 dark:text-indigo-200">To General Reserve</span>
+                    </div>
+                    <div class="font-bold text-indigo-600 dark:text-indigo-300 font-mono">+${formatCurrency(currentAllocation.reserve)}</div>
+                `;
+                els.allocationList.appendChild(div);
+            }
+        }
+
+        els.cancelAllocation.addEventListener('click', () => els.allocationModal.classList.add('hide'));
+        
+        els.confirmAllocation.addEventListener('click', async () => {
+            if (!currentUser || !currentAllocation) return;
+            
+            const btn = els.confirmAllocation;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Processing';
+            btn.disabled = true;
+
+            try {
+                await runTransaction(db, async (transaction) => {
+                    // Update Bills
+                    for (const item of currentAllocation.breakdown) {
+                        const billRef = doc(db, 'artifacts', APP_ID, 'users', currentUser.uid, 'bills', item.id);
+                        transaction.update(billRef, { amountAllocated: increment(item.amount) });
+                    }
+                    // Update Reserve
+                    if (currentAllocation.reserve > 0) {
+                        const reserveRef = doc(db, 'artifacts', APP_ID, 'users', currentUser.uid, 'meta', 'reserve');
+                        const reserveDoc = await transaction.get(reserveRef);
+                        if (reserveDoc.exists()) {
+                            transaction.update(reserveRef, { amount: increment(currentAllocation.reserve) });
+                        } else {
+                            transaction.set(reserveRef, { amount: currentAllocation.reserve });
+                        }
+                    }
+                });
+
+                els.incomeInput.value = '';
+                els.distributeBtn.disabled = true;
+                els.allocationModal.classList.add('hide');
+                currentAllocation = null;
+            } catch (error) {
+                console.error("Transaction failed: ", error);
+                alert("Failed to save allocation.");
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+
+    </script>
+</body>
+</html>
