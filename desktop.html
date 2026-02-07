@@ -93,10 +93,11 @@
     </div>
 
     <!-- MAIN APP (Desktop Dashboard Layout) -->
-    <div id="main-app" class="hide h-screen flex overflow-hidden bg-slate-50 dark:bg-slate-900">
+    <!-- UPDATED: bg-slate-50 -> bg-slate-100 for better contrast against white cards -->
+    <div id="main-app" class="hide h-screen flex overflow-hidden bg-slate-100 dark:bg-slate-900">
         
         <!-- SIDEBAR -->
-        <aside class="w-20 lg:w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col justify-between flex-shrink-0 z-20 transition-all duration-300">
+        <aside class="w-20 lg:w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col justify-between flex-shrink-0 z-20 transition-all duration-300 shadow-sm">
             <div>
                 <div class="h-20 flex items-center justify-center lg:justify-start lg:px-6 border-b border-slate-100 dark:border-slate-700/50">
                     <div class="bg-indigo-600 text-white p-2 rounded-lg mr-0 lg:mr-3 shadow-lg shadow-indigo-500/20">
@@ -106,7 +107,7 @@
                 </div>
 
                 <nav class="p-4 space-y-2">
-                    <a href="#" class="flex items-center gap-4 px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl font-medium transition-colors">
+                    <a href="#" class="flex items-center gap-4 px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl font-medium transition-colors border border-indigo-100 dark:border-indigo-500/20">
                         <i class="fa-solid fa-grid-2 text-lg w-6 text-center"></i>
                         <span class="hidden lg:block">Dashboard</span>
                     </a>
@@ -120,15 +121,15 @@
 
             <div class="p-4 border-t border-slate-100 dark:border-slate-700">
                 <div class="flex items-center gap-3 mb-4 px-2">
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
                         ID
                     </div>
                     <div class="hidden lg:block overflow-hidden">
                         <p class="text-xs font-bold text-slate-700 dark:text-slate-200">Logged In</p>
-                        <p id="user-id-display" class="text-[10px] text-slate-400 truncate w-32">Loading...</p>
+                        <p id="user-id-display" class="text-[10px] text-slate-500 truncate w-32">Loading...</p>
                     </div>
                 </div>
-                <button id="logout-btn" class="w-full flex items-center justify-center lg:justify-start gap-3 px-4 py-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-all text-sm font-bold">
+                <button id="logout-btn" class="w-full flex items-center justify-center lg:justify-start gap-3 px-4 py-2 text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-all text-sm font-bold border border-transparent hover:border-red-100">
                     <i class="fa-solid fa-right-from-bracket"></i>
                     <span class="hidden lg:block">Log Out</span>
                 </button>
@@ -139,8 +140,8 @@
         <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
             
             <!-- Header Mobile/Desktop -->
-            <header class="h-16 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-6 lg:px-8 z-10">
-                <h2 class="text-lg font-bold text-slate-700 dark:text-slate-200">Financial Overview</h2>
+            <header class="h-16 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-6 lg:px-8 z-10 shadow-sm">
+                <h2 class="text-lg font-bold text-slate-800 dark:text-slate-200">Financial Overview</h2>
                 <div class="flex items-center gap-4">
                     <!-- Theme Toggle Placeholder (Optional) -->
                 </div>
@@ -154,7 +155,7 @@
                     <div class="xl:col-span-1 space-y-6 order-1 xl:order-2">
                         
                         <!-- Main Stats Card -->
-                        <div class="bg-gradient-to-br from-indigo-600 to-purple-800 rounded-2xl p-6 lg:p-8 text-white shadow-xl shadow-indigo-900/20 relative overflow-hidden group">
+                        <div class="bg-gradient-to-br from-indigo-600 to-purple-800 rounded-2xl p-6 lg:p-8 text-white shadow-xl shadow-indigo-900/20 relative overflow-hidden group border border-indigo-500/30">
                             <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
                                 <i class="fa-solid fa-wallet text-9xl"></i>
                             </div>
@@ -163,12 +164,12 @@
                                 <p class="text-indigo-200 font-medium mb-1">General Reserve</p>
                                 <h2 id="reserve-display" class="text-4xl lg:text-5xl font-bold tracking-tight mb-6">$0.00</h2>
                                 
-                                <div class="bg-black/20 rounded-xl p-4 backdrop-blur-sm border border-white/10">
+                                <div class="bg-black/20 rounded-xl p-4 backdrop-blur-sm border border-white/10 shadow-inner">
                                     <div class="flex justify-between text-sm text-indigo-100 mb-2">
                                         <span class="font-medium">Monthly Goal</span>
-                                        <span id="progress-text" class="bg-indigo-500/50 px-2 py-0.5 rounded text-xs font-bold">0%</span>
+                                        <span id="progress-text" class="bg-indigo-500/50 px-2 py-0.5 rounded text-xs font-bold border border-indigo-400/30">0%</span>
                                     </div>
-                                    <div class="h-3 w-full bg-indigo-900/50 rounded-full overflow-hidden mb-3">
+                                    <div class="h-3 w-full bg-slate-900/40 rounded-full overflow-hidden mb-3 border border-white/5">
                                         <div id="total-progress-bar" class="h-full bg-gradient-to-r from-indigo-300 to-white shadow-[0_0_10px_rgba(255,255,255,0.5)] transition-all duration-700 ease-out" style="width: 0%"></div>
                                     </div>
                                     <div class="flex justify-between text-xs">
@@ -180,18 +181,20 @@
                         </div>
 
                         <!-- Action Center -->
-                        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                        <!-- UPDATED: Increased shadow and border contrast -->
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-300 dark:border-slate-700 p-6">
                             <h3 class="font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                                 <i class="fa-solid fa-bolt text-yellow-500"></i> Actions
                             </h3>
                             
                             <!-- Income Input -->
                             <div class="mb-4">
-                                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Inject Income</label>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Inject Income</label>
                                 <div class="flex gap-2">
                                     <div class="relative flex-1 group">
                                         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold group-focus-within:text-indigo-500 transition-colors">$</span>
-                                        <input id="income-input" type="number" placeholder="0.00" class="w-full pl-7 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-lg font-bold font-mono transition-all">
+                                        <!-- UPDATED: bg-slate-50 to bg-slate-100 and border-slate-300 for input contrast -->
+                                        <input id="income-input" type="number" placeholder="0.00" class="w-full pl-7 pr-4 py-3 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-lg font-bold font-mono transition-all">
                                     </div>
                                     <button id="distribute-btn" class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 rounded-xl font-bold transition-all shadow-md hover:shadow-indigo-500/30 active:scale-95" disabled>
                                         Distribute
@@ -199,11 +202,11 @@
                                 </div>
                             </div>
 
-                            <hr class="border-slate-100 dark:border-slate-700 my-4">
+                            <hr class="border-slate-200 dark:border-slate-700 my-4">
 
                             <!-- Add Bill Button -->
-                            <button id="show-add-bill-btn" class="w-full py-3 border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-500 hover:border-indigo-500 hover:text-indigo-500 rounded-xl font-bold transition-all flex items-center justify-center gap-2 group">
-                                <span class="bg-slate-200 dark:bg-slate-700 group-hover:bg-indigo-500 group-hover:text-white w-6 h-6 rounded-full flex items-center justify-center transition-colors">
+                            <button id="show-add-bill-btn" class="w-full py-3 border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-500 hover:border-indigo-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 rounded-xl font-bold transition-all flex items-center justify-center gap-2 group">
+                                <span class="bg-slate-100 dark:bg-slate-700 group-hover:bg-indigo-500 group-hover:text-white w-6 h-6 rounded-full flex items-center justify-center transition-colors">
                                     <i class="fa-solid fa-plus text-xs"></i>
                                 </span>
                                 Add New Bill
@@ -224,7 +227,7 @@
                         <!-- Grid Container for Cards -->
                         <div id="bills-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 pb-20">
                             <!-- Loading State -->
-                            <div class="col-span-full py-20 text-center text-slate-400 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
+                            <div class="col-span-full py-20 text-center text-slate-400 bg-white dark:bg-slate-800 rounded-2xl border border-slate-300 dark:border-slate-700 shadow-sm">
                                 <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-4 text-indigo-500"></i>
                                 <p>Syncing your data...</p>
                             </div>
@@ -247,17 +250,17 @@
             <form id="add-bill-form" class="space-y-5">
                 <div>
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Bill Name</label>
-                    <input type="text" id="bill-name" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="e.g. Electric Bill">
+                    <input type="text" id="bill-name" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="e.g. Electric Bill">
                 </div>
                 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Total ($)</label>
-                        <input type="number" step="0.01" id="bill-amount" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono" placeholder="150.00">
+                        <input type="number" step="0.01" id="bill-amount" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono" placeholder="150.00">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Due Date</label>
-                        <input type="date" id="bill-date" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                        <input type="date" id="bill-date" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
                     </div>
                 </div>
 
@@ -272,9 +275,9 @@
     <!-- ALLOCATION PREVIEW MODAL -->
     <div id="allocation-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hide">
         <div class="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col max-h-[85vh]">
-            <div class="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
+            <div class="p-6 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
                 <div class="flex items-center gap-3 mb-1">
-                    <div class="bg-green-100 text-green-600 p-2 rounded-lg">
+                    <div class="bg-green-100 text-green-600 p-2 rounded-lg border border-green-200">
                         <i class="fa-solid fa-money-bill-transfer"></i>
                     </div>
                     <h3 class="font-bold text-xl text-slate-800 dark:text-white">Allocation Plan</h3>
@@ -282,8 +285,8 @@
                 <p class="text-sm text-slate-500 ml-11">Review where your money will flow.</p>
             </div>
             
-            <div class="flex-1 overflow-y-auto p-6 space-y-6">
-                <div class="flex items-center justify-between bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+            <div class="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50">
+                <div class="flex items-center justify-between bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30 shadow-sm">
                     <span class="text-emerald-700 dark:text-emerald-400 font-medium">Total Income Injection</span>
                     <span class="font-bold text-2xl text-emerald-700 dark:text-emerald-400 font-mono" id="preview-total-income">$0.00</span>
                 </div>
@@ -296,8 +299,8 @@
                 </div>
             </div>
 
-            <div class="p-6 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex gap-4">
-                <button id="cancel-allocation" class="px-6 py-3 text-slate-600 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors">
+            <div class="p-6 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex gap-4">
+                <button id="cancel-allocation" class="px-6 py-3 text-slate-600 font-bold hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
                     Back
                 </button>
                 <button id="confirm-allocation" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/30 transition-all flex justify-center items-center gap-2 transform active:scale-[0.98]">
@@ -586,8 +589,8 @@
             
             if (bills.length === 0) {
                 els.billsContainer.innerHTML = `
-                    <div class="col-span-full text-center py-20 text-slate-400 bg-white dark:bg-slate-800 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700">
-                        <div class="mb-4 bg-slate-100 dark:bg-slate-700 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                    <div class="col-span-full text-center py-20 text-slate-400 bg-white dark:bg-slate-800 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700">
+                        <div class="mb-4 bg-slate-100 dark:bg-slate-700 w-16 h-16 rounded-full flex items-center justify-center mx-auto border border-slate-200 dark:border-slate-600">
                             <i class="fa-solid fa-receipt text-2xl text-slate-400"></i>
                         </div>
                         <h4 class="font-bold text-lg mb-1">No bills tracked</h4>
@@ -610,20 +613,22 @@
                 
                 let statusBadge = '';
                 let barColor = 'bg-indigo-500';
-                let borderColor = 'border-slate-200 dark:border-slate-700';
+                // UPDATED: Darker border for contrast
+                let borderColor = 'border-slate-300 dark:border-slate-700';
 
                 if (isFullyFunded) {
-                    statusBadge = `<span class="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide">Ready</span>`;
+                    statusBadge = `<span class="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide border border-green-200 dark:border-green-800">Ready</span>`;
                     barColor = 'bg-green-500';
-                    borderColor = 'border-green-200 dark:border-green-900/50';
+                    borderColor = 'border-green-300 dark:border-green-900/50';
                 } else if (isUrgent) {
-                    statusBadge = `<span class="bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide animate-pulse">Due Soon</span>`;
+                    statusBadge = `<span class="bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide animate-pulse border border-red-200 dark:border-red-800">Due Soon</span>`;
                     barColor = 'bg-red-500';
-                    borderColor = 'border-red-200 dark:border-red-900/50';
+                    borderColor = 'border-red-300 dark:border-red-900/50';
                 }
 
                 const el = document.createElement('div');
-                el.className = `bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border ${borderColor} relative group hover:shadow-md transition-all duration-300 hover:-translate-y-1`;
+                // UPDATED: Added shadow-md and increased border contrast
+                el.className = `bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-md border ${borderColor} relative group hover:shadow-lg transition-all duration-300 hover:-translate-y-1`;
                 el.innerHTML = `
                     <div class="absolute top-4 right-4 flex gap-2">
                         ${statusBadge}
@@ -636,7 +641,7 @@
                     <div class="mb-4 pr-16">
                         <h4 class="font-bold text-lg text-slate-800 dark:text-slate-100 truncate" title="${bill.name}">${bill.name}</h4>
                         <p class="text-xs text-slate-500 flex items-center gap-1.5 mt-1 font-medium">
-                            <i class="fa-regular fa-calendar ${isUrgent ? 'text-red-400' : ''}"></i> ${new Date(bill.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} (${diffDays} days)
+                            <i class="fa-regular fa-calendar ${isUrgent ? 'text-red-500' : ''}"></i> ${new Date(bill.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} (${diffDays} days)
                         </p>
                     </div>
                     
@@ -645,7 +650,8 @@
                          <div class="text-xs text-slate-400 font-medium mb-1">of ${formatCurrency(bill.totalAmount)}</div>
                     </div>
 
-                    <div class="h-2.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <!-- UPDATED: bg-slate-200 for better track contrast -->
+                    <div class="h-2.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden shadow-inner">
                         <div class="h-full ${barColor} transition-all duration-1000 ease-out" style="width: ${progress}%"></div>
                     </div>
                 `;
@@ -727,11 +733,11 @@
 
             currentAllocation.breakdown.forEach(item => {
                 const div = document.createElement('div');
-                div.className = 'flex justify-between items-center py-3 border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30 px-2 rounded-lg transition-colors';
+                div.className = 'flex justify-between items-center py-3 border-b border-slate-200 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30 px-2 rounded-lg transition-colors';
                 
                 let tags = '';
-                if (item.stages.includes('Urgent')) tags += `<span class="text-[10px] bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded mr-1 font-bold uppercase">Urgent Fill</span>`;
-                if (item.stages.includes('Drip')) tags += `<span class="text-[10px] bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 rounded font-bold uppercase">Daily Drip</span>`;
+                if (item.stages.includes('Urgent')) tags += `<span class="text-[10px] bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded mr-1 font-bold uppercase border border-red-200">Urgent Fill</span>`;
+                if (item.stages.includes('Drip')) tags += `<span class="text-[10px] bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 rounded font-bold uppercase border border-blue-200">Daily Drip</span>`;
 
                 div.innerHTML = `
                     <div>
@@ -748,7 +754,7 @@
 
             if (currentAllocation.reserve > 0) {
                 const div = document.createElement('div');
-                div.className = 'flex justify-between items-center py-3 bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg mt-3 border border-indigo-100 dark:border-indigo-900/30';
+                div.className = 'flex justify-between items-center py-3 bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg mt-3 border border-indigo-100 dark:border-indigo-900/30 shadow-sm';
                 div.innerHTML = `
                     <div class="flex items-center gap-3">
                         <div class="bg-indigo-100 dark:bg-indigo-800 p-1.5 rounded text-indigo-600 dark:text-indigo-300">
