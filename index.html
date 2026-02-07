@@ -2,324 +2,306 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paycheck Allocator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MicroSave Mobile</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; }
+        :root { --app-bg: #09090b; --surface: #18181b; --primary: #3b82f6; }
+        body { font-family: 'Outfit', sans-serif; background-color: var(--app-bg); color: #f4f4f5; -webkit-tap-highlight-color: transparent; }
         
-        /* Custom Animations */
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* Mobile Optimizations */
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Glass & Surfaces */
+        .glass-panel { background: rgba(24, 24, 27, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .surface-card { background: #18181b; border: 1px solid #27272a; }
+        
+        /* Inputs */
+        .mobile-input { 
+            background: #27272a; border: 1px solid transparent; color: white; 
+            font-size: 16px; /* Prevents iOS zoom */
+            padding: 12px 16px; border-radius: 12px; width: 100%; outline: none; transition: 0.2s;
+        }
+        .mobile-input:focus { border-color: var(--primary); background: #27272a; }
 
-        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
-        .animate-spin-slow { animation: spin 3s linear infinite; }
-        .delay-100 { animation-delay: 0.1s; }
-        .delay-200 { animation-delay: 0.2s; }
-        .delay-300 { animation-delay: 0.3s; }
-
-        .glass-panel {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+        /* Animations */
+        .slide-up-enter { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        /* Mobile Modal (Bottom Sheet style on mobile, Center on Desktop) */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 50; display: flex; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        
+        .modal-content {
+            width: 100%; max-width: 500px; background: #18181b; 
+            display: flex; flex-direction: column;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateY(100%);
+        }
+        
+        /* Desktop: Center Modal */
+        @media (min-width: 768px) {
+            .modal-overlay { align-items: center; justify-content: center; padding: 20px; }
+            .modal-content { border-radius: 24px; transform: scale(0.95); opacity: 0; border: 1px solid #27272a; max-height: 85vh; }
+            .modal-overlay.active .modal-content { transform: scale(1); opacity: 1; }
         }
 
-        .progress-bar { transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
-        
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
-
-        /* Hide number input arrows */
-        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        
-        .hidden-screen { display: none !important; }
-
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 4px;
+        /* Mobile: Bottom Sheet */
+        @media (max-width: 767px) {
+            .modal-overlay { align-items: flex-end; }
+            .modal-content { 
+                border-radius: 24px 24px 0 0; 
+                max-height: 90vh; 
+                padding-bottom: max(20px, env(safe-area-inset-bottom));
+            }
+            .modal-overlay.active .modal-content { transform: translateY(0); }
         }
-        .calendar-day {
-            aspect-ratio: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            position: relative;
-        }
-        .has-bill::after {
-            content: '';
-            position: absolute;
-            bottom: 4px;
-            width: 4px;
-            height: 4px;
-            background-color: #60a5fa;
-            border-radius: 50%;
+
+        .fab-button {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
         }
     </style>
 </head>
-<body class="min-h-screen selection:bg-blue-500/30">
+<body class="overflow-hidden">
 
-    <!-- Loading Screen -->
-    <div id="loading-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950 transition-opacity duration-500">
-        <div class="relative w-16 h-16 mb-4">
-            <div class="absolute inset-0 rounded-full border-t-2 border-b-2 border-blue-500 animate-spin"></div>
-            <div class="absolute inset-2 rounded-full border-r-2 border-l-2 border-green-400 animate-spin-slow"></div>
-        </div>
-        <div class="text-slate-400 text-sm tracking-widest uppercase animate-pulse">Loading Financial Engine</div>
-    </div>
-
-    <!-- Auth Screen -->
-    <div id="auth-screen" class="hidden-screen min-h-screen flex items-center justify-center p-4">
-        <div class="glass-panel w-full max-w-md p-8 rounded-2xl shadow-2xl animate-fade-in">
-            <div class="text-center mb-8">
-                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-900/20 text-blue-400 mb-4 ring-1 ring-blue-500/30">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <!-- AUTH SCREEN -->
+    <div id="auth-screen" class="fixed inset-0 z-[60] flex flex-col items-center justify-center p-6 bg-black transition-opacity duration-500">
+        <div class="w-full max-w-sm space-y-8 animate-slide-up">
+            <div class="text-center">
+                <div class="w-20 h-20 bg-blue-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-blue-500/20">
+                    <svg class="text-blue-500 w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="12" y1="12" x2="12" y2="12.01" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
                 </div>
-                <h1 class="text-2xl font-bold text-white tracking-tight">Paycheck Allocator</h1>
-                <p class="text-slate-500 mt-2 text-sm">Secure Envelope Budgeting</p>
+                <h1 class="text-3xl font-bold text-white tracking-tight">MicroSave</h1>
+                <p class="text-zinc-500 mt-2">Smart envelope budgeting.</p>
             </div>
 
-            <div id="auth-error" class="hidden bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded-lg mb-6 text-sm text-center"></div>
-
             <form id="auth-form" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1 ml-1 uppercase tracking-wider">Email</label>
-                    <div class="relative">
-                        <input type="email" id="auth-email" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg py-3 px-4 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all placeholder-slate-600" placeholder="you@example.com">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1 ml-1 uppercase tracking-wider">Password</label>
-                    <div class="relative">
-                        <input type="password" id="auth-password" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg py-3 px-4 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all placeholder-slate-600" placeholder="••••••••">
-                    </div>
-                </div>
-                <button type="submit" id="auth-submit-btn" class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-3 rounded-lg shadow-lg shadow-blue-900/20 transition-all active:scale-95 mt-2">
+                <div id="auth-error" class="hidden text-xs text-red-400 text-center bg-red-500/10 p-2 rounded-lg"></div>
+                <input type="email" id="auth-email" placeholder="Email" class="mobile-input text-center" required>
+                <input type="password" id="auth-password" placeholder="Password" class="mobile-input text-center" required>
+                <button type="submit" id="auth-btn" class="w-full py-4 bg-white text-black font-bold rounded-xl active:scale-95 transition-transform">
                     Sign In
                 </button>
             </form>
 
-            <div class="mt-6 text-center">
-                <button id="toggle-auth-mode" class="text-slate-400 hover:text-white text-sm transition-colors hover:underline">
-                    Don't have an account? Create one
+            <button id="toggle-auth" class="w-full text-zinc-500 text-sm py-2">Create an account instead</button>
+        </div>
+    </div>
+
+    <!-- MAIN APP LAYOUT -->
+    <div id="app-screen" class="hidden w-full h-full flex flex-col relative">
+        
+        <!-- HEADER -->
+        <header class="flex-none px-6 pt-12 pb-4 bg-gradient-to-b from-black to-transparent z-10">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-sm text-zinc-400 font-medium">Total Saved</h2>
+                    <div class="text-4xl font-bold text-white tracking-tight mt-1" id="header-total">$0.00</div>
+                </div>
+                <button onclick="signOutApp()" class="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 hover:bg-zinc-700">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
                 </button>
             </div>
-        </div>
-    </div>
 
-    <!-- App Screen -->
-    <div id="app-screen" class="hidden-screen min-h-screen pb-20">
-        <div class="max-w-6xl mx-auto p-4 md:p-6">
-            
-            <!-- Header -->
-            <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 animate-fade-in">
-                <div>
-                    <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-green-400 bg-clip-text text-transparent">Paycheck Allocator</h1>
-                    <div class="flex items-center gap-2 mt-2">
-                        <span class="relative flex h-2 w-2">
-                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                          <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                        </span>
-                        <p class="text-slate-500 text-sm">User: <span id="user-display" class="font-mono text-xs bg-slate-900 px-2 py-0.5 rounded text-slate-400 border border-slate-800">...</span></p>
-                        <button id="sign-out-btn" class="ml-2 text-xs text-red-400 hover:text-red-300 border border-red-900/30 bg-red-900/10 px-2 py-0.5 rounded transition-colors">Sign Out</button>
-                    </div>
-                </div>
-                <div class="flex gap-3 w-full md:w-auto">
-                    <button onclick="openModal('add-bill-modal')" class="flex-1 md:flex-none flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2.5 rounded-lg border border-slate-700 transition-all active:scale-95 shadow-lg">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                        Add Bill
-                    </button>
-                    <button onclick="openPaycheckModal()" class="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg shadow-blue-900/20 transition-all active:scale-95">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="1" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                        Deposit Paycheck
-                    </button>
-                </div>
-            </header>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in delay-100">
-                
-                <!-- Left Column: Calendar & Stats -->
-                <div class="space-y-6">
-                    <!-- Stats -->
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="glass-panel p-4 rounded-2xl relative overflow-hidden">
-                            <div class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Total Allocated</div>
-                            <div class="text-2xl font-bold text-green-400" id="total-allocated">$0.00</div>
-                        </div>
-                        <div class="glass-panel p-4 rounded-2xl relative overflow-hidden">
-                            <div class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Monthly Load</div>
-                            <div class="text-2xl font-bold text-white" id="total-due">$0.00</div>
-                        </div>
-                    </div>
-
-                    <!-- Calendar -->
-                    <div class="glass-panel p-5 rounded-2xl">
-                        <h3 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                            <span id="calendar-month">Calendar</span>
-                        </h3>
-                        <div class="calendar-grid text-center text-xs text-slate-500 mb-2">
-                            <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
-                        </div>
-                        <div id="calendar-days" class="calendar-grid">
-                            <!-- Days injected here -->
-                        </div>
-                    </div>
-                    
-                    <!-- History (Recent Paychecks) -->
-                    <div class="glass-panel p-5 rounded-2xl">
-                        <h3 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-purple-400"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
-                            History
-                        </h3>
-                        <div id="history-list" class="space-y-3 max-h-48 overflow-y-auto">
-                            <!-- Transactions -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right Column: Bills List -->
-                <div class="lg:col-span-2 space-y-4">
-                    <h2 class="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-200">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                        My Bills & Loans
-                    </h2>
-                    <div id="bills-container" class="grid gap-4">
-                        <!-- Bills injected here -->
-                    </div>
-                    <div id="empty-state" class="hidden text-center py-12 glass-panel rounded-2xl border-dashed border border-slate-700">
-                        <div class="text-slate-500 mb-2">No bills found.</div>
-                        <button onclick="openModal('add-bill-modal')" class="text-blue-400 hover:text-blue-300 underline text-sm">Add your first bill</button>
-                    </div>
-                </div>
-
+            <!-- Progress Bar -->
+            <div class="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+                <div id="header-progress" class="bg-blue-500 h-full rounded-full transition-all duration-1000" style="width: 0%"></div>
             </div>
+            <div class="flex justify-between mt-2 text-xs text-zinc-500 font-medium">
+                <span>Monthly Progress</span>
+                <span id="header-percent">0%</span>
+            </div>
+        </header>
+
+        <!-- SCROLLABLE CONTENT -->
+        <main class="flex-1 overflow-y-auto hide-scrollbar px-4 pb-32" id="main-scroll">
+            
+            <!-- Filter Pills -->
+            <div class="flex gap-2 mb-6 overflow-x-auto hide-scrollbar pb-2">
+                <button onclick="filterBills('all')" class="filter-btn active px-4 py-2 rounded-full bg-white text-black text-sm font-semibold transition-colors">All</button>
+                <button onclick="filterBills('urgent')" class="filter-btn px-4 py-2 rounded-full bg-zinc-800 text-zinc-400 text-sm font-medium border border-zinc-700">Urgent</button>
+                <button onclick="filterBills('ready')" class="filter-btn px-4 py-2 rounded-full bg-zinc-800 text-zinc-400 text-sm font-medium border border-zinc-700">Ready</button>
+            </div>
+
+            <!-- Grid -->
+            <div id="envelopes-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- Cards injected here -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden flex flex-col items-center justify-center py-20 text-zinc-600">
+                <div class="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center mb-4">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                </div>
+                <p>No envelopes yet</p>
+                <p class="text-sm">Tap + to add one</p>
+            </div>
+
+            <div class="h-8"></div> <!-- Spacer -->
+        </main>
+
+        <!-- BOTTOM NAVIGATION -->
+        <nav class="flex-none bg-black/80 backdrop-blur-xl border-t border-white/5 pb-[env(safe-area-inset-bottom)] z-40 fixed bottom-0 w-full md:relative md:hidden">
+            <div class="flex justify-around items-center h-16 px-2">
+                <button class="flex flex-col items-center gap-1 p-2 text-blue-500">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    <span class="text-[10px] font-medium">Home</span>
+                </button>
+                
+                <!-- FAB Wrapper -->
+                <div class="relative -top-6">
+                    <button onclick="toggleFabMenu()" class="fab-button w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl active:scale-95 transition-transform">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                    </button>
+                </div>
+
+                <button onclick="showHistory()" class="flex flex-col items-center gap-1 p-2 text-zinc-500 hover:text-white transition-colors">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span class="text-[10px] font-medium">History</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- DESKTOP NAV FAB EQUIVALENT (Hidden on mobile) -->
+        <div class="hidden md:block fixed bottom-8 right-8 z-50">
+            <button onclick="toggleFabMenu()" class="fab-button w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl hover:scale-105 transition-transform">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- ACTION MENU (BottomSheet Overlay) -->
+    <div id="fab-menu" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex-col justify-end p-6 pb-24 md:justify-center md:pb-6 animate-fade-in" onclick="toggleFabMenu()">
+        <div class="flex flex-col gap-3 max-w-sm mx-auto w-full">
+            <button onclick="openModal('bill-modal')" class="bg-zinc-800 hover:bg-zinc-700 text-white p-4 rounded-xl flex items-center gap-4 border border-zinc-700 shadow-xl transform translate-y-4 transition-transform duration-200">
+                <div class="w-10 h-10 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" x2="12" y1="11" y2="17"/><line x1="9" x2="15" y1="14" y2="14"/></svg>
+                </div>
+                <div class="text-left">
+                    <div class="font-bold">Add Envelope</div>
+                    <div class="text-xs text-zinc-400">Create a new bill tracker</div>
+                </div>
+            </button>
+            <button onclick="openModal('deposit-modal')" class="bg-zinc-800 hover:bg-zinc-700 text-white p-4 rounded-xl flex items-center gap-4 border border-zinc-700 shadow-xl transform translate-y-2 transition-transform duration-200 delay-75">
+                <div class="w-10 h-10 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" x2="12" y1="1" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </div>
+                <div class="text-left">
+                    <div class="font-bold">Deposit Paycheck</div>
+                    <div class="text-xs text-zinc-400">Distribute funds</div>
+                </div>
+            </button>
         </div>
     </div>
 
-    <!-- ADD/EDIT BILL MODAL -->
-    <div id="add-bill-modal" class="hidden-screen fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity">
-        <div class="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 p-6 shadow-2xl animate-fade-in">
-            <h2 id="modal-title" class="text-xl font-bold text-white mb-6">Add New Bill</h2>
-            <form id="add-bill-form" class="space-y-4">
+    <!-- BILL MODAL -->
+    <div id="bill-modal" class="modal-overlay">
+        <div class="modal-content flex flex-col h-auto">
+            <div class="p-6 border-b border-white/5 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-white" id="bill-modal-title">New Envelope</h3>
+                <button onclick="closeModal('bill-modal')" class="p-2 text-zinc-500 hover:text-white bg-zinc-800 rounded-full"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+            
+            <form id="bill-form" class="p-6 space-y-5 overflow-y-auto">
                 <input type="hidden" id="bill-id">
                 <div>
-                    <label class="block text-sm text-slate-400 mb-1">Bill Name</label>
-                    <input type="text" id="bill-name" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 transition-colors" placeholder="e.g. Rent, Netflix">
+                    <label class="text-xs font-semibold text-zinc-500 uppercase ml-1">Name</label>
+                    <input type="text" id="bill-name" class="mobile-input" placeholder="e.g. Rent" required>
                 </div>
-                <div class="flex gap-4">
-                    <div class="flex-1">
-                        <label class="block text-sm text-slate-400 mb-1">Payment Amount</label>
-                        <input type="number" id="bill-amount" step="0.01" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 transition-colors" placeholder="0.00">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs font-semibold text-zinc-500 uppercase ml-1">Monthly Cost</label>
+                        <input type="number" id="bill-amount" step="0.01" class="mobile-input" placeholder="$0.00" required>
                     </div>
-                    <div class="flex-1">
-                        <label class="block text-sm text-slate-400 mb-1">Next Due Date</label>
-                        <input type="date" id="bill-date" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 transition-colors">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm text-slate-400 mb-1">Frequency</label>
-                    <select id="bill-frequency" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 transition-colors">
-                        <option value="once">One-time</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="biweekly">Bi-Weekly</option>
-                        <option value="monthly" selected>Monthly</option>
-                        <option value="yearly">Yearly</option>
-                    </select>
-                </div>
-                
-                <div class="pt-2 border-t border-slate-800 mt-2">
-                    <label class="flex items-center gap-2 cursor-pointer mb-2">
-                        <input type="checkbox" id="is-loan-check" class="w-4 h-4 rounded bg-slate-700 border-slate-600 text-blue-500 focus:ring-blue-600">
-                        <span class="text-sm text-slate-300">This is a Loan / Microloan</span>
-                    </label>
-                    <div id="loan-fields" class="hidden animate-fade-in space-y-3">
-                         <div>
-                             <label class="block text-sm text-slate-400 mb-1">Current Loan Balance</label>
-                             <input type="number" id="bill-total-debt" step="0.01" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 transition-colors" placeholder="e.g. 14200.00">
-                         </div>
-                         <div>
-                             <label class="block text-sm text-slate-400 mb-1">Annual Interest Rate (%)</label>
-                             <input type="number" id="bill-interest" step="0.01" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 transition-colors" placeholder="e.g. 7.9">
-                             <p class="text-xs text-slate-500 mt-1">Used to calculate interest portion when paying.</p>
-                         </div>
+                    <div>
+                        <label class="text-xs font-semibold text-zinc-500 uppercase ml-1">Due Date</label>
+                        <input type="date" id="bill-date" class="mobile-input" required>
                     </div>
                 </div>
 
-                <div class="mt-8 flex justify-end gap-3 pt-4 border-t border-slate-800">
-                    <button type="button" onclick="closeModal('add-bill-modal')" class="px-4 py-2 text-slate-400 hover:text-white transition-colors">Cancel</button>
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-bold shadow-lg transition-all active:scale-95">Save</button>
+                <div class="bg-zinc-900 p-4 rounded-xl border border-zinc-800">
+                    <label class="flex items-center gap-3">
+                        <input type="checkbox" id="bill-has-balance" class="w-5 h-5 rounded bg-zinc-700 border-zinc-600 text-blue-500 focus:ring-blue-600">
+                        <span class="text-sm font-medium text-zinc-300">Existing Balance?</span>
+                    </label>
+                    <div id="balance-input-container" class="hidden mt-4">
+                        <label class="text-xs font-semibold text-zinc-500 uppercase ml-1">Current Saved</label>
+                        <input type="number" id="bill-current-saved" step="0.01" class="mobile-input" placeholder="$0.00">
+                    </div>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="button" id="delete-bill-btn" class="hidden px-4 py-3 bg-red-500/10 text-red-400 rounded-xl font-medium">Delete</button>
+                    <button type="submit" class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-900/20 active:scale-95 transition-transform">Save</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- PAYCHECK MODAL -->
-    <div id="paycheck-modal" class="hidden-screen fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-        <div class="bg-slate-900 w-full max-w-lg rounded-2xl border border-slate-700 shadow-2xl flex flex-col max-h-[90vh] animate-fade-in">
-            <div class="p-6 border-b border-slate-800">
-                <h2 class="text-xl font-bold text-white flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-400"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
-                    Deposit Paycheck
-                </h2>
-                <p class="text-slate-400 text-sm mt-1">Enter your income and distribute it.</p>
-            </div>
-
-            <div class="p-6 flex-1 overflow-y-auto">
-                <div class="mb-6 sticky top-0 bg-slate-900 z-10 pb-4 border-b border-slate-800/50">
-                    <label class="block text-sm font-medium text-slate-400 mb-2">Paycheck Amount</label>
-                    <div class="flex gap-2">
-                        <div class="relative flex-1">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
-                            <input type="number" id="paycheck-amount" class="w-full bg-slate-800 border border-slate-700 rounded-lg py-3 pl-8 pr-4 text-white focus:outline-none focus:border-green-500 transition-colors text-lg" placeholder="0.00">
-                        </div>
-                        <button onclick="autoDistribute()" class="bg-slate-700 hover:bg-slate-600 text-green-400 px-4 rounded-lg text-sm font-medium transition-colors border border-slate-600">
-                            Auto Fill
-                        </button>
-                    </div>
-                    <!-- Sweep to Savings -->
-                    <div class="mt-3 flex justify-between items-center bg-slate-800/50 p-2 rounded-lg border border-slate-700/50">
-                        <div class="text-sm font-medium text-slate-400" id="remaining-display">
-                            <span>Remaining:</span>
-                            <span id="remaining-amount" class="text-white ml-1">$0.00</span>
-                        </div>
-                        <button onclick="sweepToSavings()" class="text-xs bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 px-3 py-1.5 rounded-md font-medium transition-colors border border-blue-500/30">
-                            Sweep to Savings
-                        </button>
-                    </div>
+    <!-- DEPOSIT MODAL -->
+    <div id="deposit-modal" class="modal-overlay">
+        <div class="modal-content flex flex-col h-[90vh] md:h-auto">
+            <div class="p-6 border-b border-white/5 bg-zinc-900 z-10 sticky top-0">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-white">Deposit</h3>
+                    <button onclick="closeModal('deposit-modal')" class="p-2 text-zinc-500 hover:text-white bg-zinc-800 rounded-full"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                 </div>
-
-                <div id="allocation-list" class="space-y-3">
-                    <!-- Allocation Items -->
+                
+                <div class="bg-zinc-800 p-2 rounded-xl flex gap-2 border border-zinc-700">
+                    <div class="flex-1 relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 font-bold">$</span>
+                        <input type="number" id="deposit-amount" class="w-full bg-transparent text-white font-bold pl-7 pr-2 py-2 outline-none" placeholder="0.00">
+                    </div>
+                    <select id="deposit-freq" class="bg-zinc-700 text-white text-xs rounded-lg px-2 outline-none border-l border-zinc-600">
+                        <option value="1">Weekly</option>
+                        <option value="2">Bi-Weekly</option>
+                        <option value="4">Monthly</option>
+                    </select>
+                </div>
+                <div class="flex justify-between items-center mt-3">
+                    <button onclick="autoDistribute()" class="text-xs font-bold text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-500/20">Auto-Fill</button>
+                    <div class="text-xs text-zinc-400">Remaining: <span id="deposit-remaining" class="text-white font-mono">$0.00</span></div>
                 </div>
             </div>
 
-            <div class="p-6 border-t border-slate-800 flex justify-end gap-3 bg-slate-900 rounded-b-2xl">
-                <button onclick="closeModal('paycheck-modal')" class="px-4 py-2 text-slate-400 hover:text-white transition-colors">Cancel</button>
-                <button onclick="submitDistribution()" id="distribute-btn" class="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-lg font-bold shadow-lg shadow-green-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
-                    Distribute Funds
+            <div id="deposit-list" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar bg-black/20">
+                <!-- JS Injected -->
+            </div>
+
+            <div class="p-4 border-t border-white/5 bg-zinc-900 pb-[calc(20px+env(safe-area-inset-bottom))]">
+                <button onclick="submitDeposit()" id="submit-deposit-btn" class="w-full py-4 bg-green-600 text-white font-bold rounded-xl shadow-lg shadow-green-900/20 active:scale-95 transition-transform disabled:opacity-50">
+                    Confirm Deposit
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- LOGIC -->
+    <!-- HISTORY MODAL -->
+    <div id="history-modal" class="modal-overlay">
+        <div class="modal-content h-[60vh]">
+             <div class="p-6 border-b border-white/5 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-white">Recent Deposits</h3>
+                <button onclick="closeModal('history-modal')" class="p-2 text-zinc-500 hover:text-white bg-zinc-800 rounded-full"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+            <div id="history-list" class="p-4 space-y-2 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <!-- JS LOGIC -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDoc, onSnapshot, query, orderBy, serverTimestamp, limit } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, limit, writeBatch } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
         // CONFIG
         const firebaseConfig = {
-            apiKey: "AIzaSyBalSGWdrzYB0XH8cw-tcEqT_7uUssjAtY",
+            apiKey: "",
             authDomain: "studio-4711143268-e528e.firebaseapp.com",
             projectId: "studio-4711143268-e528e",
             storageBucket: "studio-4711143268-e528e.firebasestorage.app",
@@ -330,694 +312,388 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        
-        // Globals
-        let currentUser = null;
-        let billsData = [];
-        let unsubscribeBills = null;
-        let unsubscribeHistory = null;
-        let isRegisterMode = false;
-        
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-        // --- AUTH LOGIC ---
-        
+        let currentUser = null;
+        let bills = [];
+        let currentFilter = 'all';
+
+        // --- AUTH ---
         const initAuth = async () => {
-             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                try {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } catch(e) { console.log("Custom token failed", e); }
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
             }
         };
         initAuth();
 
         onAuthStateChanged(auth, (user) => {
             currentUser = user;
-            const loading = document.getElementById('loading-screen');
             const authScreen = document.getElementById('auth-screen');
             const appScreen = document.getElementById('app-screen');
-
-            loading.style.opacity = '0';
-            setTimeout(() => loading.classList.add('hidden-screen'), 500);
-
+            
             if (user) {
-                authScreen.classList.add('hidden-screen');
-                appScreen.classList.remove('hidden-screen');
-                document.getElementById('user-display').innerText = user.email;
-                setupBillsListener(user.uid);
-                setupHistoryListener(user.uid);
+                authScreen.style.opacity = '0';
+                setTimeout(() => authScreen.classList.add('hidden'), 500);
+                appScreen.classList.remove('hidden');
+                setupListeners(user.uid);
             } else {
-                authScreen.classList.remove('hidden-screen');
-                appScreen.classList.add('hidden-screen');
-                if(unsubscribeBills) unsubscribeBills();
-                if(unsubscribeHistory) unsubscribeHistory();
-                billsData = [];
+                authScreen.classList.remove('hidden');
+                setTimeout(() => authScreen.style.opacity = '1', 10);
+                appScreen.classList.add('hidden');
             }
         });
 
-        // Form Handlers
+        // --- FORM HANDLERS ---
+        document.getElementById('toggle-auth').addEventListener('click', (e) => {
+            const btn = document.getElementById('auth-btn');
+            const isLogin = btn.innerText === 'Sign In';
+            btn.innerText = isLogin ? 'Create Account' : 'Sign In';
+            e.target.innerText = isLogin ? 'Already have an account? Sign In' : 'Create an account instead';
+        });
+
         document.getElementById('auth-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('auth-email').value;
             const pass = document.getElementById('auth-password').value;
-            const errorDiv = document.getElementById('auth-error');
-            const btn = document.getElementById('auth-submit-btn');
+            const btn = document.getElementById('auth-btn');
+            const err = document.getElementById('auth-error');
 
-            errorDiv.classList.add('hidden');
-            btn.innerHTML = '<span class="animate-spin inline-block mr-2 border-2 border-t-transparent border-white rounded-full h-4 w-4"></span> Processing...';
+            btn.innerText = 'Please wait...';
             btn.disabled = true;
+            err.classList.add('hidden');
 
             try {
-                if (isRegisterMode) {
-                    await createUserWithEmailAndPassword(auth, email, pass);
-                } else {
-                    await signInWithEmailAndPassword(auth, email, pass);
-                }
-            } catch (err) {
-                errorDiv.innerText = err.message.replace('Firebase: ', '');
-                errorDiv.classList.remove('hidden');
-            } finally {
-                btn.innerHTML = isRegisterMode ? 'Create Account' : 'Sign In';
+                if (btn.innerText.includes('Create')) await createUserWithEmailAndPassword(auth, email, pass);
+                else await signInWithEmailAndPassword(auth, email, pass);
+            } catch (error) {
+                err.innerText = error.message.replace('Firebase: ', '');
+                err.classList.remove('hidden');
                 btn.disabled = false;
+                btn.innerText = document.getElementById('toggle-auth').innerText.includes('Sign In') ? 'Create Account' : 'Sign In';
             }
         });
 
-        document.getElementById('toggle-auth-mode').addEventListener('click', (e) => {
-            e.preventDefault();
-            isRegisterMode = !isRegisterMode;
-            const btn = document.getElementById('auth-submit-btn');
-            const toggle = document.getElementById('toggle-auth-mode');
-            const title = document.querySelector('#auth-screen h1');
-            
-            if(isRegisterMode) {
-                btn.innerText = 'Create Account';
-                toggle.innerText = 'Already have an account? Sign In';
-                title.innerText = 'Join Paycheck Allocator';
-            } else {
-                btn.innerText = 'Sign In';
-                toggle.innerText = "Don't have an account? Create one";
-                title.innerText = 'Paycheck Allocator';
-            }
-        });
+        window.signOutApp = () => signOut(auth);
 
-        document.getElementById('sign-out-btn').addEventListener('click', () => signOut(auth));
-
-        // --- FIRESTORE LOGIC ---
-
-        function setupBillsListener(uid) {
-            const ref = collection(db, 'artifacts', appId, 'users', uid, 'bills');
-            const q = query(ref, orderBy('dueDate', 'asc'));
-
-            unsubscribeBills = onSnapshot(q, (snapshot) => {
-                billsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // --- CORE LOGIC ---
+        function setupListeners(uid) {
+            // Bills
+            const q = query(collection(db, 'artifacts', appId, 'users', uid, 'bills'), orderBy('dueDate', 'asc'));
+            onSnapshot(q, (snapshot) => {
+                bills = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                 renderBills();
-                renderCalendar();
                 updateStats();
             });
-        }
 
-        function setupHistoryListener(uid) {
-            const ref = collection(db, 'artifacts', appId, 'users', uid, 'transactions');
-            const q = query(ref, orderBy('date', 'desc'), limit(10));
-
-            unsubscribeHistory = onSnapshot(q, (snapshot) => {
+            // History
+            const histQ = query(collection(db, 'artifacts', appId, 'users', uid, 'transactions'), orderBy('date', 'desc'), limit(10));
+            onSnapshot(histQ, (snapshot) => {
                 const list = document.getElementById('history-list');
                 list.innerHTML = '';
-                if(snapshot.empty) {
-                    list.innerHTML = '<div class="text-xs text-slate-500 text-center">No history yet</div>';
-                    return;
-                }
-                
-                snapshot.forEach(docSnap => {
-                    const data = docSnap.data();
-                    const div = document.createElement('div');
-                    div.className = "flex justify-between items-center text-xs p-2 bg-slate-800/50 rounded hover:bg-slate-800 transition-colors group";
-                    div.innerHTML = `
-                        <div>
-                            <div class="text-slate-300 font-medium">Deposited $${data.total.toFixed(2)}</div>
-                            <div class="text-slate-500">${data.date ? new Date(data.date.seconds * 1000).toLocaleDateString() : 'Just now'}</div>
-                        </div>
-                        <div class="flex gap-1">
-                             <button onclick="window.editTransaction('${docSnap.id}')" class="text-slate-500 hover:text-blue-400 p-1" title="Edit">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-                            </button>
-                            <button onclick="window.undoTransaction('${docSnap.id}')" class="text-slate-500 hover:text-red-400 p-1" title="Undo & Delete">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                            </button>
-                        </div>
+                if(snapshot.empty) list.innerHTML = '<div class="text-zinc-500 text-center py-4">No recent deposits</div>';
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    const item = document.createElement('div');
+                    item.className = 'flex justify-between p-3 bg-zinc-800 rounded-lg border border-zinc-700';
+                    item.innerHTML = `
+                        <span class="text-zinc-400 text-sm">${d.date ? new Date(d.date.seconds*1000).toLocaleDateString() : 'Now'}</span>
+                        <span class="text-green-400 font-bold font-mono">+$${d.total.toFixed(2)}</span>
                     `;
-                    list.appendChild(div);
+                    list.appendChild(item);
                 });
             });
         }
 
-        // --- RENDER & UI ---
-
         function renderBills() {
-            const container = document.getElementById('bills-container');
-            const emptyState = document.getElementById('empty-state');
-            container.innerHTML = '';
+            const grid = document.getElementById('envelopes-grid');
+            grid.innerHTML = '';
+            
+            // Filter logic
+            let displayBills = bills;
+            if (currentFilter === 'urgent') displayBills = bills.filter(b => getDaysUntil(b.dueDate) <= 7 && b.saved < b.cost);
+            if (currentFilter === 'ready') displayBills = bills.filter(b => b.saved >= b.cost);
 
-            if (billsData.length === 0) {
-                emptyState.classList.remove('hidden');
+            if (displayBills.length === 0 && bills.length > 0) {
+                 grid.innerHTML = '<div class="col-span-full text-center py-10 text-zinc-600">No envelopes match this filter</div>';
+                 return;
+            }
+            if (bills.length === 0) {
+                document.getElementById('empty-state').classList.remove('hidden');
                 return;
             }
-            emptyState.classList.add('hidden');
+            document.getElementById('empty-state').classList.add('hidden');
 
-            billsData.forEach((bill, index) => {
+            displayBills.forEach(bill => {
+                const percent = Math.min(100, Math.max(0, (bill.saved / bill.cost) * 100));
+                const isFull = bill.saved >= bill.cost;
                 const daysLeft = getDaysUntil(bill.dueDate);
-                const isOverdue = daysLeft < 0;
-                const isFullyFunded = (bill.allocated || 0) >= bill.amount;
-                const progress = Math.min(100, Math.max(0, ((bill.allocated || 0) / bill.amount) * 100));
+                
+                let accent = "border-zinc-800";
+                let barColor = "bg-zinc-600";
+                let statusText = `${daysLeft} days left`;
+                let statusClass = "text-zinc-500";
 
-                let statusColor = "text-slate-400";
-                let statusText = `Due in ${daysLeft} days`;
-                if (isOverdue) { statusColor = "text-red-400"; statusText = `Overdue by ${Math.abs(daysLeft)} days`; }
-                else if (daysLeft <= 3) statusColor = "text-orange-400";
-
-                let barColor = "bg-blue-500";
-                if(progress >= 100) barColor = "bg-green-500";
-                else if(progress < 30) barColor = "bg-red-500";
-
-                // Loan Logic
-                const isLoan = !!bill.totalDebt;
-                let loanText = "";
-                if(isLoan) {
-                    const rateText = bill.interestRate ? `<span class="bg-slate-700 px-1 rounded text-[10px] ml-1">${bill.interestRate}% APR</span>` : '';
-                    loanText = `<div class="text-xs text-purple-300 mt-1 flex items-center gap-1">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> 
-                        Balance: $${(bill.totalDebt - (bill.allocated || 0)).toFixed(2)}
-                        ${rateText}
-                    </div>`;
-                    if(isFullyFunded) {
-                        statusText = "Ready to Pay!";
-                        statusColor = "text-green-400";
-                    }
+                if (isFull) {
+                    accent = "border-green-500/30 bg-green-900/10";
+                    barColor = "bg-green-500";
+                    statusText = "Ready to Pay";
+                    statusClass = "text-green-400 font-bold";
+                } else if (daysLeft < 0) {
+                    accent = "border-red-500/30 bg-red-900/10";
+                    barColor = "bg-red-500";
+                    statusText = "Overdue";
+                    statusClass = "text-red-400 font-bold";
+                } else if (daysLeft <= 7) {
+                    barColor = "bg-orange-500";
                 }
 
-                const card = document.createElement('div');
-                card.className = `glass-panel rounded-xl p-5 border-l-4 shadow-lg transition-all hover:border-slate-500 animate-fade-in ${isFullyFunded ? 'border-l-green-500' : 'border-l-slate-700'}`;
-                card.style.animationDelay = `${index * 50}ms`;
-
-                card.innerHTML = `
+                const el = document.createElement('div');
+                el.className = `p-4 rounded-2xl surface-card ${accent} transition-transform active:scale-[0.98]`;
+                el.innerHTML = `
                     <div class="flex justify-between items-start mb-3">
                         <div>
-                            <h3 class="font-bold text-lg text-white flex items-center gap-2">
-                                ${bill.name}
-                                ${bill.frequency !== 'once' ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>' : ''}
-                            </h3>
-                            <p class="text-sm font-medium ${statusColor}">
-                                ${statusText} <span class="text-slate-500 font-normal"> • ${formatDate(bill.dueDate)}</span>
-                            </p>
-                            ${loanText}
+                            <div class="font-bold text-lg text-white">${bill.name}</div>
+                            <div class="text-xs ${statusClass}">${statusText}</div>
                         </div>
-                        <div class="flex gap-2">
-                            ${isFullyFunded ? `
-                            <button onclick="window.payBill('${bill.id}')" class="bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shadow-lg shadow-green-900/20">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Pay
-                            </button>` : ''}
-                            <button onclick="window.editBill('${bill.id}')" class="text-slate-500 hover:text-blue-400 p-1 transition-colors">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-                            </button>
-                            <button onclick="window.deleteBill('${bill.id}')" class="text-slate-500 hover:text-red-400 p-1 transition-colors">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                            </button>
+                        <div class="text-right">
+                            <div class="text-lg font-bold text-white">$${bill.saved.toFixed(0)}</div>
+                            <div class="text-xs text-zinc-500">of $${bill.cost.toFixed(0)}</div>
                         </div>
                     </div>
-                    <div class="mb-2 flex justify-between text-sm text-slate-300">
-                        <span>Saved: <span class="${isFullyFunded ? 'text-green-400 font-bold' : 'text-white'}">$${(bill.allocated || 0).toFixed(2)}</span></span>
-                        <span>Target: $${bill.amount.toFixed(2)}</span>
+                    
+                    <div class="h-2 w-full bg-zinc-800 rounded-full overflow-hidden mb-4">
+                        <div class="h-full ${barColor} transition-all duration-500" style="width: ${percent}%"></div>
                     </div>
-                    <div class="h-2.5 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-700">
-                        <div class="h-full ${barColor} progress-bar shadow-[0_0_10px_rgba(59,130,246,0.5)]" style="width: ${progress}%"></div>
+
+                    <div class="flex gap-2">
+                        ${isFull ? `
+                        <button onclick="payBill('${bill.id}')" class="flex-1 py-2.5 bg-green-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-green-900/20">Pay Bill</button>
+                        ` : `
+                        <button onclick="quickAdd('${bill.id}')" class="flex-1 py-2.5 bg-zinc-800 text-blue-400 text-sm font-medium rounded-xl border border-zinc-700">Add Funds</button>
+                        `}
+                        <button onclick="editBill('${bill.id}')" class="w-10 flex items-center justify-center bg-zinc-800 rounded-xl border border-zinc-700 text-zinc-400">
+                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                        </button>
                     </div>
                 `;
-                container.appendChild(card);
+                grid.appendChild(el);
             });
         }
 
-        function renderCalendar() {
-            const today = new Date();
-            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            document.getElementById('calendar-month').innerText = monthNames[today.getMonth()] + " " + today.getFullYear();
-
-            const daysContainer = document.getElementById('calendar-days');
-            daysContainer.innerHTML = '';
-
-            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).getDay();
-            const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-
-            // Empty slots
-            for (let i = 0; i < firstDay; i++) {
-                daysContainer.appendChild(document.createElement('div'));
+        // --- ACTIONS ---
+        window.toggleFabMenu = () => {
+            const menu = document.getElementById('fab-menu');
+            if(menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+                menu.classList.add('flex');
+            } else {
+                menu.classList.add('hidden');
+                menu.classList.remove('flex');
             }
+        };
 
-            // Days
-            for (let i = 1; i <= daysInMonth; i++) {
-                const dayDiv = document.createElement('div');
-                dayDiv.className = "calendar-day hover:bg-slate-800/50 transition-colors cursor-default";
-                dayDiv.innerText = i;
-                
-                const currentStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-                
-                // Highlight today
-                if (i === today.getDate()) {
-                    dayDiv.classList.add('bg-blue-600/20', 'text-blue-400', 'font-bold');
-                } else {
-                    dayDiv.classList.add('text-slate-400');
-                }
+        window.filterBills = (type) => {
+            currentFilter = type;
+            document.querySelectorAll('.filter-btn').forEach(b => {
+                b.classList.remove('bg-white', 'text-black');
+                b.classList.add('bg-zinc-800', 'text-zinc-400');
+            });
+            event.target.classList.remove('bg-zinc-800', 'text-zinc-400');
+            event.target.classList.add('bg-white', 'text-black');
+            renderBills();
+        };
 
-                // Check for bills
-                const hasBill = billsData.some(b => b.dueDate === currentStr);
-                if (hasBill) dayDiv.classList.add('has-bill');
+        window.payBill = async (id) => {
+            const bill = bills.find(b => b.id === id);
+            if(!bill) return;
+            const remainder = bill.saved - bill.cost;
+            const nextDate = new Date(bill.dueDate);
+            nextDate.setMonth(nextDate.getMonth() + 1);
 
-                daysContainer.appendChild(dayDiv);
+            if(confirm(`Pay ${bill.name}? $${remainder.toFixed(2)} will rollover.`)) {
+                await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'bills', id), {
+                    saved: remainder,
+                    dueDate: nextDate.toISOString().split('T')[0]
+                });
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
             }
-        }
+        };
 
-        function updateStats() {
-            const allocated = billsData.reduce((sum, b) => sum + (b.allocated || 0), 0);
-            const total = billsData.reduce((sum, b) => sum + b.amount, 0);
-            document.getElementById('total-allocated').innerText = '$' + allocated.toFixed(2);
-            document.getElementById('total-due').innerText = '$' + total.toFixed(2);
-        }
+        window.quickAdd = async (id) => {
+            const amt = prompt("Amount to add:");
+            if(amt && !isNaN(amt)) {
+                const bill = bills.find(b => b.id === id);
+                await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'bills', id), {
+                    saved: bill.saved + parseFloat(amt)
+                });
+            }
+        };
 
-        // --- ACTIONS & HELPERS ---
-        
-        // Modal Logic for Create AND Edit
-        document.getElementById('add-bill-form').addEventListener('submit', async (e) => {
+        // --- BILL MODAL LOGIC ---
+        document.getElementById('bill-has-balance').addEventListener('change', (e) => {
+            const div = document.getElementById('balance-input-container');
+            if(e.target.checked) div.classList.remove('hidden'); else div.classList.add('hidden');
+        });
+
+        document.getElementById('bill-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = e.target.querySelector('button[type="submit"]');
-            btn.innerText = 'Saving...';
-            
             const id = document.getElementById('bill-id').value;
             const data = {
                 name: document.getElementById('bill-name').value,
-                amount: parseFloat(document.getElementById('bill-amount').value),
+                cost: parseFloat(document.getElementById('bill-amount').value),
                 dueDate: document.getElementById('bill-date').value,
-                frequency: document.getElementById('bill-frequency').value,
-                // Only update debt if checkbox is checked
-                totalDebt: document.getElementById('is-loan-check').checked ? parseFloat(document.getElementById('bill-total-debt').value) || 0 : null,
-                interestRate: document.getElementById('is-loan-check').checked ? parseFloat(document.getElementById('bill-interest').value) || 0 : null
+                saved: document.getElementById('bill-has-balance').checked ? parseFloat(document.getElementById('bill-current-saved').value) : (id ? undefined : 0) // Keep saved if undefined
             };
+            
+            // If editing and didn't check balance, remove 'saved' from update to prevent overwrite
+            if(id && !document.getElementById('bill-has-balance').checked) delete data.saved;
 
-            try {
-                if(id) {
-                    // Update
-                    await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'bills', id), data);
-                } else {
-                    // Create
-                    await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'bills'), {
-                        ...data,
-                        allocated: 0
-                    });
-                }
-                closeModal('add-bill-modal');
-                e.target.reset();
-            } catch(err) { console.error(err); } 
-            finally { btn.innerText = 'Save'; }
+            if(id) await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'bills', id), data);
+            else await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'bills'), data);
+            
+            closeModal('bill-modal');
         });
         
-        // Toggle Loan fields
-        document.getElementById('is-loan-check').addEventListener('change', (e) => {
-            const fields = document.getElementById('loan-fields');
-            if(e.target.checked) fields.classList.remove('hidden');
-            else fields.classList.add('hidden');
+        document.getElementById('delete-bill-btn').addEventListener('click', async () => {
+             const id = document.getElementById('bill-id').value;
+             if(confirm("Delete this envelope?")) {
+                 await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'bills', id));
+                 closeModal('bill-modal');
+             }
         });
 
         window.editBill = (id) => {
-            const bill = billsData.find(b => b.id === id);
-            if(!bill) return;
-
-            document.getElementById('modal-title').innerText = 'Edit Bill';
-            document.getElementById('bill-id').value = bill.id;
+            const bill = bills.find(b => b.id === id);
+            document.getElementById('bill-id').value = id;
             document.getElementById('bill-name').value = bill.name;
-            document.getElementById('bill-amount').value = bill.amount;
+            document.getElementById('bill-amount').value = bill.cost;
             document.getElementById('bill-date').value = bill.dueDate;
-            document.getElementById('bill-frequency').value = bill.frequency;
-            
-            const isLoan = !!bill.totalDebt;
-            document.getElementById('is-loan-check').checked = isLoan;
-            document.getElementById('loan-fields').className = isLoan ? 'animate-fade-in space-y-3' : 'hidden';
-            if(isLoan) {
-                document.getElementById('bill-total-debt').value = bill.totalDebt;
-                document.getElementById('bill-interest').value = bill.interestRate || '';
-            }
-
-            openModal('add-bill-modal');
-        }
-
-        window.payBill = async (id) => {
-            const bill = billsData.find(b => b.id === id);
-            if(!bill) return;
-            const ref = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'bills', id);
-            
-            // Check Loan Logic
-            if(bill.totalDebt) {
-                const payment = bill.allocated || 0;
-                let newDebt = bill.totalDebt;
-                let principal = payment;
-                let interest = 0;
-
-                // Interest Calculation Logic
-                if (bill.interestRate && bill.interestRate > 0) {
-                    // Approximate Monthly Interest: (Balance * AnnualRate) / 12
-                    const monthlyRate = (bill.interestRate / 100) / 12;
-                    interest = bill.totalDebt * monthlyRate;
-                    
-                    if (payment <= interest) {
-                        alert(`Warning: Your payment of $${payment.toFixed(2)} is less than the accrued interest of $${interest.toFixed(2)}. Your balance will increase.`);
-                        newDebt = bill.totalDebt + (interest - payment);
-                        principal = 0; // Or negative, technically
-                    } else {
-                        principal = payment - interest;
-                        newDebt = bill.totalDebt - principal;
-                    }
-                    
-                    // Confirm with user breakdown
-                    const msg = `Payment Breakdown:\n\nPayment Amount: $${payment.toFixed(2)}\nInterest (${bill.interestRate}%): $${interest.toFixed(2)}\nPrincipal Paid: $${principal.toFixed(2)}\n\nNew Loan Balance: $${newDebt.toFixed(2)}\n\nConfirm payment?`;
-                    if(!confirm(msg)) return;
-                } else {
-                     newDebt = bill.totalDebt - payment;
-                }
-
-                if(newDebt <= 0.01) { // Floating point safety
-                    // Confetti!
-                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-                    if(confirm(`Congrats! ${bill.name} is fully paid off! Archive it?`)) {
-                        await deleteDoc(ref);
-                        return;
-                    } else {
-                         await updateDoc(ref, { allocated: 0, totalDebt: 0 });
-                         return;
-                    }
-                } else {
-                    // Just reduce debt, reset allocated, advance date
-                    const next = calculateNextDueDate(bill.dueDate, bill.frequency);
-                    await updateDoc(ref, { allocated: 0, totalDebt: newDebt, dueDate: next });
-                    return;
-                }
-            }
-
-            // Normal Bill Logic
-            if(bill.frequency === 'once') {
-                if(confirm("This is a one-time bill. Remove it now?")) {
-                    await deleteDoc(ref);
-                } else {
-                    await updateDoc(ref, { allocated: 0 });
-                }
-            } else {
-                const next = calculateNextDueDate(bill.dueDate, bill.frequency);
-                await updateDoc(ref, { allocated: 0, dueDate: next });
-            }
+            document.getElementById('bill-modal-title').innerText = "Edit Envelope";
+            document.getElementById('delete-bill-btn').classList.remove('hidden');
+            openModal('bill-modal');
         };
 
-        window.deleteBill = async (id) => {
-            if(confirm("Delete this bill?")) {
-                await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'bills', id));
-            }
-        };
-        
-        // --- TRANSACTIONS LOGIC ---
-
-        window.editTransaction = async (txId) => {
-            if(!confirm("To edit this deposit, we will undo it first and let you redistribute. Continue?")) return;
-            
-            const txRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'transactions', txId);
-            const txSnap = await getDoc(txRef);
-            if(!txSnap.exists()) return;
-            const data = txSnap.data();
-
-            // 1. Undo
-            const updates = [];
-            for (const [billId, amount] of Object.entries(data.allocations)) {
-                const bill = billsData.find(b => b.id === billId);
-                if(bill) {
-                    const newAlloc = Math.max(0, (bill.allocated || 0) - amount);
-                    updates.push(updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'bills', billId), {
-                        allocated: newAlloc
-                    }));
-                }
-            }
-            updates.push(deleteDoc(txRef));
-            await Promise.all(updates);
-
-            // 2. Open Modal and set amount
-            window.openPaycheckModal();
-            // We set the amount after opening so the listener logic works
-            setTimeout(() => {
-                const input = document.getElementById('paycheck-amount');
-                if(input) {
-                    input.value = data.total;
-                    input.dispatchEvent(new Event('input')); // trigger listeners
-                }
-            }, 100);
-        };
-        
-        window.undoTransaction = async (txId) => {
-            if(!confirm("Undo this deposit? This will remove funds from the envelopes.")) return;
-            const txRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'transactions', txId);
-            const txSnap = await getDoc(txRef);
-            
-            if(!txSnap.exists()) return;
-            const data = txSnap.data();
-            const updates = [];
-            
-            // Reverse allocations
-            for (const [billId, amount] of Object.entries(data.allocations)) {
-                const bill = billsData.find(b => b.id === billId);
-                if(bill) {
-                    const newAlloc = Math.max(0, (bill.allocated || 0) - amount);
-                    updates.push(updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'bills', billId), {
-                        allocated: newAlloc
-                    }));
-                }
-            }
-            
-            // Delete transaction
-            updates.push(deleteDoc(txRef));
-            await Promise.all(updates);
-        };
-
-
-        // --- PAYCHECK LOGIC ---
-
-        window.openPaycheckModal = () => {
-            const list = document.getElementById('allocation-list');
-            list.innerHTML = '';
-            document.getElementById('paycheck-amount').value = '';
-            updateRemaining();
-
-            // Sort unpaid by urgency, BUT force "Savings" to the bottom
-            const unpaid = billsData
-                .filter(b => (b.allocated || 0) < b.amount || b.name.toLowerCase().includes('savings'))
-                .sort((a,b) => {
-                    // Force savings to bottom
-                    const isASavings = a.name.toLowerCase().includes('savings');
-                    const isBSavings = b.name.toLowerCase().includes('savings');
-                    if (isASavings && !isBSavings) return 1;
-                    if (!isASavings && isBSavings) return -1;
-                    // Otherwise sort by urgency
-                    return getDaysUntil(a.dueDate) - getDaysUntil(b.dueDate);
-                });
-
-            if(unpaid.length === 0) {
-                list.innerHTML = '<div class="text-center text-slate-500 py-4">All bills are funded!</div>';
-            } else {
-                unpaid.forEach(bill => {
-                    const needed = bill.amount - (bill.allocated || 0);
-                    const div = document.createElement('div');
-                    div.className = "bg-slate-800 p-3 rounded-lg border border-slate-700 flex items-center justify-between";
-                    div.innerHTML = `
-                        <div class="flex-1">
-                            <div class="text-white font-medium">${bill.name}</div>
-                            <div class="text-xs text-slate-400">Needs $${needed.toFixed(2)} • Due ${formatDate(bill.dueDate)}</div>
-                        </div>
-                        <div class="w-28 relative">
-                            <input type="number" 
-                                data-id="${bill.id}"
-                                data-needed="${needed}"
-                                class="allocation-input w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-right text-white focus:border-green-500 focus:outline-none text-sm placeholder-slate-600"
-                                placeholder="0.00">
-                        </div>
-                    `;
-                    list.appendChild(div);
-                });
-            }
-            
-            document.querySelectorAll('.allocation-input').forEach(inp => {
-                inp.addEventListener('input', updateRemaining);
-            });
-            document.getElementById('paycheck-amount').addEventListener('input', updateRemaining);
-
-            openModal('paycheck-modal');
-        };
-
-        window.sweepToSavings = async () => {
-            const remainingText = document.getElementById('remaining-amount').innerText.replace('$','');
-            const remainder = parseFloat(remainingText) || 0;
-            if(remainder <= 0) return;
-
-            // Find Savings Input
-            let savingsInput = Array.from(document.querySelectorAll('.allocation-input')).find(input => {
-                const id = input.dataset.id;
-                const bill = billsData.find(b => b.id === id);
-                return bill.name.toLowerCase().includes('savings');
-            });
-
-            if(savingsInput) {
-                const currentVal = parseFloat(savingsInput.value) || 0;
-                savingsInput.value = (currentVal + remainder).toFixed(2);
-                updateRemaining(); // Recalculate
-            } else {
-                if(confirm("No 'Savings' envelope found. Create one automatically?")) {
-                     await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'bills'), {
-                        name: 'Savings',
-                        amount: 10000, // Arbitrary high target for savings
-                        dueDate: new Date().toISOString().split('T')[0],
-                        frequency: 'monthly',
-                        allocated: 0
-                    });
-                    // Re-open (close then open to refresh list)
-                    // We lose input state if we just reload, but since user had no savings bill, they probably just started.
-                    // Let's just alert them to re-click.
-                    alert("Savings envelope created! Please click 'Sweep to Savings' again.");
-                    // Force refresh of list without closing? Tricky with current arch. 
-                    // Better to just let the Snapshot listener update background, but we need to refresh the modal list.
-                    // Since it's rare (one time setup), alert is fine.
-                    // Actually, let's just close and re-open to be cleaner, saving the amount.
-                    const currentAmount = document.getElementById('paycheck-amount').value;
-                    closeModal('paycheck-modal');
-                    setTimeout(() => {
-                        openPaycheckModal();
-                        setTimeout(() => {
-                             document.getElementById('paycheck-amount').value = currentAmount;
-                             document.getElementById('paycheck-amount').dispatchEvent(new Event('input'));
-                        }, 200);
-                    }, 500);
-                }
-            }
-        };
-
+        // --- DEPOSIT LOGIC ---
         window.autoDistribute = () => {
-            let amount = parseFloat(document.getElementById('paycheck-amount').value) || 0;
-            const inputs = document.querySelectorAll('.allocation-input');
-            inputs.forEach(input => {
-                if(amount <= 0) { input.value = ''; return; }
-                const needed = parseFloat(input.dataset.needed);
-                const give = Math.min(amount, needed);
-                input.value = give.toFixed(2);
-                amount -= give;
+            const amount = parseFloat(document.getElementById('deposit-amount').value) || 0;
+            const freq = parseInt(document.getElementById('deposit-freq').value) || 4;
+            document.querySelectorAll('.deposit-input').forEach(inp => {
+                const cost = parseFloat(inp.dataset.cost);
+                const saved = parseFloat(inp.dataset.saved);
+                let val = cost / (4 / freq);
+                const needed = cost - saved;
+                if(val > needed) val = needed;
+                if(val < 0) val = 0;
+                inp.value = val.toFixed(2);
             });
-            updateRemaining();
+            updateDepositRemaining();
         };
 
-        function updateRemaining() {
-            const totalIn = parseFloat(document.getElementById('paycheck-amount').value) || 0;
+        window.updateDepositRemaining = () => {
+            const total = parseFloat(document.getElementById('deposit-amount').value) || 0;
             let allocated = 0;
-            document.querySelectorAll('.allocation-input').forEach(i => allocated += (parseFloat(i.value) || 0));
-            const rem = totalIn - allocated;
-            const el = document.getElementById('remaining-amount');
-            const display = document.getElementById('remaining-display');
-            const btn = document.getElementById('distribute-btn');
+            document.querySelectorAll('.deposit-input').forEach(i => allocated += (parseFloat(i.value) || 0));
+            const rem = total - allocated;
+            const el = document.getElementById('deposit-remaining');
+            const btn = document.getElementById('submit-deposit-btn');
             
             el.innerText = '$' + rem.toFixed(2);
-            if(rem < 0) {
-                display.classList.remove('text-slate-400'); display.classList.add('text-red-400'); btn.disabled = true;
-            } else {
-                display.classList.add('text-slate-400'); display.classList.remove('text-red-400'); btn.disabled = false;
-            }
-        }
+            if(rem < 0) { el.classList.add('text-red-400'); el.classList.remove('text-white'); btn.disabled = true; btn.innerText = "Over Budget"; }
+            else { el.classList.remove('text-red-400'); el.classList.add('text-white'); btn.disabled = false; btn.innerText = "Confirm Deposit"; }
+        };
 
-        window.submitDistribution = async () => {
-            const btn = document.getElementById('distribute-btn');
-            btn.innerText = 'Distributing...';
-            btn.disabled = true;
-
-            const updates = [];
-            const allocationRecord = {};
-            let totalDistributed = 0;
-
-            document.querySelectorAll('.allocation-input').forEach(input => {
-                const add = parseFloat(input.value);
+        window.submitDeposit = async () => {
+            const btn = document.getElementById('submit-deposit-btn');
+            btn.disabled = true; btn.innerText = 'Processing...';
+            const batch = writeBatch(db);
+            let totalAdded = 0;
+            
+            document.querySelectorAll('.deposit-input').forEach(inp => {
+                const add = parseFloat(inp.value) || 0;
                 if(add > 0) {
-                    const id = input.dataset.id;
-                    const bill = billsData.find(b => b.id === id);
-                    if(bill) {
-                        allocationRecord[id] = add;
-                        totalDistributed += add;
-                        updates.push(updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'bills', id), {
-                            allocated: (bill.allocated || 0) + add
-                        }));
-                    }
+                    totalAdded += add;
+                    const ref = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'bills', inp.dataset.id);
+                    batch.update(ref, { saved: parseFloat(inp.dataset.saved) + add });
                 }
             });
 
-            if(totalDistributed > 0) {
-                // Save Transaction History
-                updates.push(addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'transactions'), {
-                    date: serverTimestamp(),
-                    total: totalDistributed,
-                    allocations: allocationRecord
-                }));
+            if(totalAdded > 0) {
+                const transRef = doc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'transactions'));
+                batch.set(transRef, { total: totalAdded, date: serverTimestamp() });
+                await batch.commit();
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
             }
-
-            await Promise.all(updates);
-            btn.innerText = 'Distribute Funds';
-            btn.disabled = false;
-            closeModal('paycheck-modal');
+            closeModal('deposit-modal');
         };
 
         // --- UTILS ---
-
         window.openModal = (id) => {
-            document.getElementById(id).classList.remove('hidden-screen');
-            if(id === 'add-bill-modal') {
-                // Reset if opening fresh (not edit)
-                if(document.getElementById('modal-title').innerText !== 'Edit Bill') {
-                    document.getElementById('add-bill-form').reset();
+            const modal = document.getElementById(id);
+            modal.classList.add('active');
+            
+            if(id === 'bill-modal') {
+                 if(document.getElementById('bill-modal-title').innerText !== "Edit Envelope") {
+                    document.getElementById('bill-form').reset();
                     document.getElementById('bill-id').value = '';
-                    document.getElementById('modal-title').innerText = 'Add New Bill';
-                    document.getElementById('loan-fields').classList.add('hidden');
-                }
+                    document.getElementById('delete-bill-btn').classList.add('hidden');
+                    document.getElementById('balance-input-container').classList.add('hidden');
+                 }
             }
+
+            if(id === 'deposit-modal') {
+                const list = document.getElementById('deposit-list');
+                list.innerHTML = '';
+                document.getElementById('deposit-amount').value = '';
+                document.getElementById('deposit-remaining').innerText = '$0.00';
+                
+                // Sort by Need (Highest % needed first)
+                const sorted = [...bills].sort((a,b) => (b.cost - b.saved) - (a.cost - a.saved));
+                
+                sorted.forEach(b => {
+                    const row = document.createElement('div');
+                    row.className = "flex items-center gap-3 bg-zinc-800 p-3 rounded-xl border border-zinc-700";
+                    row.innerHTML = `
+                        <div class="flex-1">
+                            <div class="text-sm font-bold text-white">${b.name}</div>
+                            <div class="text-xs text-zinc-500">Saved: $${b.saved.toFixed(0)} / $${b.cost.toFixed(0)}</div>
+                        </div>
+                        <input type="number" step="0.01" class="deposit-input w-24 bg-black text-white p-2 rounded-lg text-right outline-none focus:ring-1 ring-blue-500" placeholder="0.00" data-id="${b.id}" data-cost="${b.cost}" data-saved="${b.saved}">
+                    `;
+                    list.appendChild(row);
+                });
+                
+                document.getElementById('deposit-amount').addEventListener('input', updateDepositRemaining);
+                document.querySelectorAll('.deposit-input').forEach(i => i.addEventListener('input', updateDepositRemaining));
+            }
+            
+            // Hide FAB menu if open
+            document.getElementById('fab-menu').classList.add('hidden');
+            document.getElementById('fab-menu').classList.remove('flex');
         };
 
         window.closeModal = (id) => {
-            document.getElementById(id).classList.add('hidden-screen');
-            if(id === 'add-bill-modal') {
-                // Reset title for next time
-                setTimeout(() => {
-                    document.getElementById('modal-title').innerText = 'Add New Bill';
-                    document.getElementById('bill-id').value = '';
-                }, 300);
-            }
+            document.getElementById(id).classList.remove('active');
+            // Reset modal titles after animation
+            setTimeout(() => {
+                if(id === 'bill-modal') document.getElementById('bill-modal-title').innerText = "New Envelope";
+            }, 300);
         };
         
-        window.onclick = function(event) {
-            if (event.target.classList.contains('fixed')) { 
-                if(event.target.id !== 'loading-screen') event.target.classList.add('hidden-screen');
-            }
-        }
+        window.showHistory = () => openModal('history-modal');
 
-        function formatDate(d) {
-            if (!d) return 'No Date';
-            return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        function updateStats() {
+            const saved = bills.reduce((a,b) => a + b.saved, 0);
+            const cost = bills.reduce((a,b) => a + b.cost, 0);
+            const pct = cost > 0 ? (saved / cost) * 100 : 0;
+            document.getElementById('header-total').innerText = '$' + saved.toFixed(2);
+            document.getElementById('header-progress').style.width = Math.min(100, pct) + '%';
+            document.getElementById('header-percent').innerText = pct.toFixed(0) + '% Funded';
         }
 
         function getDaysUntil(d) {
-            const today = new Date(); today.setHours(0,0,0,0);
-            const target = new Date(d); target.setHours(0,0,0,0);
-            return Math.ceil((target - today) / (1000 * 60 * 60 * 24));
-        }
-
-        function calculateNextDueDate(current, freq) {
-            const d = new Date(current);
-            if(freq === 'weekly') d.setDate(d.getDate() + 7);
-            else if(freq === 'biweekly') d.setDate(d.getDate() + 14);
-            else if(freq === 'monthly') d.setMonth(d.getMonth() + 1);
-            else if(freq === 'yearly') d.setFullYear(d.getFullYear() + 1);
-            return d.toISOString().split('T')[0];
+            return Math.ceil((new Date(d) - new Date().setHours(0,0,0,0)) / (86400000));
         }
 
     </script>
